@@ -38,7 +38,5 @@ jobs:
             *) echo "DIST_TAG=latest" >> "$GITHUB_ENV" ;;
           esac
       - run: npm ci
-      # First release with a token; after it, set up trusted publishing on npmjs.com and drop the env
+      # trusted publishing: npm exchanges the OIDC token, no npm token needed
       - run: npm publish --provenance --access public --tag "$DIST_TAG"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
