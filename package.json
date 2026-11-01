@@ -1,0 +1,58 @@
+{
+  "name": "@takesix/mcp",
+  "version": "0.1.0",
+  "description": "MCP server that lets AI agents answer with a TakeSix diagram instead of a wall of text: guide, validation and a viewer in the conversation",
+  "type": "module",
+  "bin": {
+    "takesix-mcp": "dist/mcp.js"
+  },
+  "files": [
+    "dist",
+    "skill/takesix/SKILL.md",
+    "skill/takesix/references",
+    "skill/takesix/assets"
+  ],
+  "scripts": {
+    "build": "vite build --config vite.viewer.config.ts && vite build --config vite.cli.config.ts && vite build --config vite.app.config.ts && vite build --config vite.mcp.config.ts",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-app",
+    "diagram",
+    "takesix",
+    "ai",
+    "agent",
+    "claude"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vvapnik/takesix-agent.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@takesix/core": "^0.2.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@takesix/react": "^0.3.0",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

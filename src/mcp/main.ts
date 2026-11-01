@@ -1,0 +1,24 @@
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { createServer } from './server.js'
+
+// Runs from <package>/dist/mcp.js; the skill and the built views ship alongside.
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+const read = (...path: string[]) => readFileSync(join(root, ...path), 'utf8')
+const require = createRequire(import.meta.url)
+
+const server = createServer({
+  version: JSON.parse(read('package.json')).version,
+  skillMd: read('skill', 'takesix', 'SKILL.md'),
+  formatMd: read('skill', 'takesix', 'references', 'format.md'),
+  schemaJson: readFileSync(require.resolve('@takesix/core/schema.json'), 'utf8'),
+  viewerJs: read('skill', 'takesix', 'assets', 'viewer.js'),
+  viewerCss: read('skill', 'takesix', 'assets', 'viewer.css'),
+  appJs: read('dist', 'app', 'app.js'),
+  appCss: read('dist', 'app', 'app.css'),
+})
+
+await server.connect(new StdioServerTransport())

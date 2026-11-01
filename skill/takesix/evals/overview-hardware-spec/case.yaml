@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: overview-hardware-spec
+expected_outcome: |
+  An overview of the OpenGardenRack spec delivered as a takesix diagram (the user did not name takesix,
+  but asked for an overview of a structured multi-document spec): top level answers how the parts fit
+  together in at most six blocks, deeper levels hold the details from the eight docs, the file passes
+  the validator and is rendered to a self-contained .html; the reply is short.
