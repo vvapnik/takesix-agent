@@ -105,6 +105,21 @@ the reader sees, so keep the viewer in mind while writing.
 - A card shows only icon, title, one line of description and "N more inside".
   Children are not previewed, so the title and description must say what is
   inside.
+- **Text must fit the block's size.** A card never shrinks its text: a
+  description longer than the card holds is cut off with "…", and a long
+  title pushes the description out. Budget per block width (characters, measured on a
+  MacBook Pro 13", Cyrillic slightly less than Latin):
+
+  | Width (columns) | 1 | 2 | 3 | 4 | 5 | 6 |
+  |---|---|---|---|---|---|---|
+  | Title | 15 | 40 | 65 | 85 | 110 | 130 |
+  | Description, one-row block | 19 | 50 | 85 | 110 | 140 | 330 |
+
+  A one-row block holds one line of description (two at full width); every
+  extra row adds about six lines, and the title may then take two lines. A
+  one-column block fits a title of one or two short words and a few words of
+  description — if the block needs more, make it wider, not the text smaller.
+  `validate` warns about every title and description over its budget.
 - `description` is one short line. Anything longer — explanations, code,
   lists, caveats — goes into `details`. It is a small Markdown subset:
   headings, paragraphs, `-` and `1.` lists, `code`, **bold**, *italic*, fenced
@@ -116,13 +131,23 @@ the reader sees, so keep the viewer in mind while writing.
 The grid always fills the screen: six equal columns, six equal rows. Empty
 cells stay empty on screen, so where you leave space is as visible as where
 you put a block.
-- **Use the whole grid and leave room between blocks.** Spread the blocks over
-  all six columns and as many rows as the level needs; do not pack them into
-  the top-left corner, and do not try to fill every cell. Free space is part of
-  the design, not waste.
-- **Keep blocks small.** One or two cells per block is the norm; give more only
-  to the block the level is about (a tall or wide block draws the eye first).
-  A one-row block holds a title and a short description of one or two lines.
+- **Balance the screen: blocks gather around the middle.** Place them as one
+  composition centred on the grid, with about as much free space to the left
+  as to the right, and above as below; do not pack them into the top-left
+  corner or leave half the screen empty, and do not try to fill every cell.
+  One row of blocks goes in row 3, not row 1; two rows go in rows 2 and 4;
+  a pair of blocks sits in `B:C` and `D:E`, not `A:B` and `C:D`. Keep the
+  gaps that arrows and groups need (below), and centre what is left.
+- **Keep blocks small, but at least two columns wide.** A block of two cells
+  side by side (`"A1:B1"`) is the norm: it fits a real title and a line of
+  description. Give more only to the block the level is about (a tall or wide
+  block draws the eye first). A one-row block holds a title and one line of
+  description (see the text budget above); size the block for its text.
+- **One-column blocks only when the shape needs them** — three blocks in a
+  row with free columns between, a hub with neighbours beside it. Then keep
+  their text to the one-column budget (a title of one or two short words, a
+  few words of description), or rearrange: two blocks per row, two columns
+  each, read better than three cramped ones.
 - **Put an empty cell between blocks linked by an arrow.** With a free column
   between them a horizontal arrow has room to read and room for its label; the
   same goes for a free row between blocks linked from top to bottom. Blocks
@@ -138,6 +163,19 @@ you put a block.
   smooth curve, side to side, between blocks that share neither. Place linked
   blocks in the same row or column, or as a branch (diagonal) with a free
   column between them.
+- **Keep the direction of a flow.** Where a chain of arrows passes through a
+  block, the arrow out goes on the way the arrow in came: straight on, or
+  turned by 45° (a straight arrow followed by a diagonal one, or the other way
+  round). Avoid 90° turns — in from the left, out at the bottom — and never
+  turn back. When a chain is longer than one direction of the grid holds, run
+  it as a staircase (down and to the right), or group its finished or minor
+  steps into one block, instead of wrapping it onto the next row.
+- **Similar blocks get a similar layout inside.** When a block opens into more
+  of what its own screen shows — steps of the same flow grouped into "Done"
+  or "Next", stages of the same plan — its children take the same shape as
+  that screen (the same staircase, the same direction), centred. Blocks that
+  are peers on one screen (two services, two stages) lay out their children
+  alike too. The reader then knows where they are without reading.
 - An arrow must not have a third block in its way, and arrows should not cross.
   Trace each link on your sketch; `validate` lists both as layout hints.
 - Read order is left to right, then top to bottom. Put sources on the left (or
@@ -148,8 +186,8 @@ you put a block.
 Chain, left to right            Branching tree (fan out)
    A  B  C  D  E  F                A  B  C  D  E  F
 1  ·  ·  ·  ·  ·  ·             1  ·  ·  ·  ·  c1 ·
-2  a  ·  b  ·  c  ·             2  ·  ·  ·  ·  ·  ·
-                                3  r  ·  m  ·  c2 ·
+2  ·  ·  ·  ·  ·  ·             2  ·  ·  ·  ·  ·  ·
+3  a  ·  b  ·  c  ·             3  r  ·  m  ·  c2 ·
                                 4  ·  ·  ·  ·  ·  ·
                                 5  ·  ·  ·  ·  c3 ·
 
@@ -161,8 +199,10 @@ Hub in the middle               Steps of a plan, top to bottom
 4  ·  ·  ·  ·  ·  ·             4  ·  ·  ·  ·  ·  ·
 5  ·  ·  ·  n4 ·  ·             5  ·  ·  s3 s3 s3 s3
 ```
-- **Chain** (a flow, a pipeline): `"A2"`, `"C2"`, `"E2"`; more than three
-  steps go on to the next row with a free row between.
+- **Chain** (a flow, a pipeline): `"A3"`, `"C3"`, `"E3"`, in the middle row.
+  When the steps need more text than one column holds, or there are more than
+  three, do not wrap them onto the next row (that turns the flow back): use
+  Steps below, or group steps.
 - **Tree** (one thing branching into several): the root `r` on the left, each
   next step `m` one free column further right, the branches `c1`–`c3` spread
   over rows 1, 3, 5.
