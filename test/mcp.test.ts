@@ -24,8 +24,8 @@ const doc: TakeSixDocument = {
   takesix: '1.0',
   title: 'Shop',
   blocks: [
-    { id: 'web', title: 'Web' },
-    { id: 'api', title: 'API', children: [{ id: 'auth', title: 'Auth' }] },
+    { id: 'web', title: 'Web', at: 'A1:B1' },
+    { id: 'api', title: 'API', at: 'D1:F1', children: [{ id: 'auth', title: 'Auth', at: 'A1' }] },
   ],
   links: [{ id: 'l1', from: 'web', to: 'api' }],
 }

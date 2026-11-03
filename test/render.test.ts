@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type { TakeSixDocument } from '@takesix/core'
 import { renderHtml } from '../src/render.js'
+import { layoutHints, sketch } from '../src/layout.js'
 import { summarize } from '../src/summary.js'
 
 const doc: TakeSixDocument = {
   takesix: '1.0',
   title: 'A <b>"quoted"</b> title',
   blocks: [
-    { id: 'a', title: 'A', children: [{ id: 'a1', title: 'A1' }] },
-    { id: 'b', title: 'B', description: '</script><script>alert(1)</script>' },
-    { id: 'c', title: 'C', children: [{ id: 'c1', title: 'C1' }] },
+    { id: 'a', title: 'A', at: 'A1', children: [{ id: 'a1', title: 'A1', at: 'A1' }] },
+    { id: 'b', title: 'B', at: 'C1', description: '</script><script>alert(1)</script>' },
+    { id: 'c', title: 'C', at: 'E1:F2', children: [{ id: 'c1', title: 'C1', at: 'B2' }] },
   ],
   links: [
     { id: 'ab', from: 'a', to: 'b' },
@@ -44,5 +45,28 @@ describe('summarize', () => {
     expect(summarize(doc)).toBe(
       '5 blocks on 2 levels, 2 links; top level shows 2 arrows (1 merged from nested links: check they are wanted there)',
     )
+  })
+})
+
+describe('layoutHints', () => {
+  it('is empty for a clean layout', () => {
+    expect(layoutHints({ ...doc, links: [{ from: 'a', to: 'b' }] })).toBe('')
+  })
+
+  it('lists arrows with a block in their way', () => {
+    const blocked: TakeSixDocument = { ...doc, links: [{ from: 'a', to: 'c' }] }
+    expect(layoutHints(blocked)).toMatch(/^Layout hints[^\n]*\nwarning \/blocks: Arrow "a" → "c" has block "b" in its way/)
+  })
+})
+
+describe('sketch', () => {
+  it('draws every level as a grid of block ids', () => {
+    const lines = sketch(doc).split('\n')
+    expect(lines[0]).toBe('A <b>"quoted"</b> title')
+    expect(lines[1]).toBe('    A         B         C         D         E         F')
+    expect(lines[2]).toBe(' 1  a         ·         b         ·         c         c')
+    expect(lines[3]).toBe(' 2  ·         ·         ·         ·         c         c')
+    // nested levels follow, indented
+    expect(lines).toContain('   2  ·         c1        ·         ·         ·         ·')
   })
 })

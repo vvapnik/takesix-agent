@@ -7,6 +7,7 @@ import { RESOURCE_MIME_TYPE, registerAppResource, registerAppTool } from '@model
 import { formatIssues, parseDocument, type TakeSixDocument } from '@takesix/core'
 import { z } from 'zod'
 import { renderHtml } from '../render.js'
+import { layoutHints } from '../layout.js'
 import { summarize } from '../summary.js'
 import { guideText } from './guide.js'
 import { DOCUMENT_META_KEY, VIEW_URI } from './shared.js'
@@ -57,7 +58,8 @@ function load(args: { document?: Record<string, unknown>; file?: string }): Load
   if (!result.ok) {
     return fail(`Invalid takesix document. Fix these and try again:\n${formatIssues(result.issues)}`)
   }
-  return { ok: true, doc: result.document, warnings: result.issues.length ? formatIssues(result.issues) + '\n' : '', file }
+  const warnings = (result.issues.length ? formatIssues(result.issues) + '\n' : '') + layoutHints(result.document)
+  return { ok: true, doc: result.document, warnings, file }
 }
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'diagram'

@@ -3,12 +3,6 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 // node_modules/@takesix/core/dist/constants.js
-var SIZES = [
-	"S",
-	"M",
-	"L",
-	"F"
-];
 var LINK_DIRECTIONS = [
 	"forward",
 	"both",
@@ -37,6 +31,59 @@ function buildIndex(doc) {
 	walk(doc.blocks, null, []);
 	return index;
 }
+// node_modules/@takesix/core/dist/grid.js
+var CELL$1 = /^([A-Z])(\d+)$/;
+function parseCell(cell) {
+	const m = CELL$1.exec(cell);
+	if (!m) return void 0;
+	const col = m[1].charCodeAt(0) - 65;
+	const row = Number(m[2]) - 1;
+	if (col >= 6 || row < 0 || row >= 6) return void 0;
+	return {
+		col,
+		row
+	};
+}
+/**
+* Reads an `at` value: one cell (`"B3"`) or a range of cells, both corners
+* included (`"A1:C2"`). Returns a message instead of an area when the value
+* is malformed, so the validator can say what is wrong.
+*/
+function readArea(at) {
+	const [first, last, extra] = at.split(":");
+	const start = parseCell(first);
+	const end = last === void 0 ? start : parseCell(last);
+	if (extra !== void 0 || !start || !end) return `"${at}" is not a cell like "B3" or a range like "A1:C2" (columns A–F, rows 1–6)`;
+	if (end.col < start.col || end.row < start.row) return `"${at}" ends before it starts: write the top-left cell first`;
+	return {
+		col: start.col,
+		row: start.row,
+		width: end.col - start.col + 1,
+		height: end.row - start.row + 1
+	};
+}
+/** The area of an `at` value, or `undefined` when it is malformed. */
+function parseArea(at) {
+	const area = readArea(at);
+	return typeof area === "string" ? void 0 : area;
+}
+var cellName = (col, row) => `${String.fromCharCode(65 + col)}${row + 1}`;
+/** The top-left cell two areas share, e.g. `"B2"`, or `undefined` if they do not overlap. */
+function overlap(a, b) {
+	const col = Math.max(a.col, b.col);
+	const row = Math.max(a.row, b.row);
+	if (col >= Math.min(a.col + a.width, b.col + b.width) || row >= Math.min(a.row + a.height, b.row + b.height)) return void 0;
+	return cellName(col, row);
+}
+/** Areas of the blocks of one level, skipping blocks whose `at` is malformed. */
+function levelAreas(blocks) {
+	const areas = /* @__PURE__ */ new Map();
+	for (const block of blocks) {
+		const area = typeof block.at === "string" ? parseArea(block.at) : void 0;
+		if (area) areas.set(block.id, area);
+	}
+	return areas;
+}
 // node_modules/@takesix/core/dist/validate.js
 var DOCUMENT_FIELDS = [
 	"takesix",
@@ -53,7 +100,7 @@ var BLOCK_FIELDS = [
 	"description",
 	"details",
 	"icon",
-	"size",
+	"at",
 	"children",
 	"meta"
 ];
@@ -92,8 +139,21 @@ function validateDocument(input) {
 	const checkUnknown = (obj, allowed, path) => {
 		for (const key of Object.keys(obj)) if (!allowed.includes(key)) add("warning", "unknown-field", `${path}/${key}`, `Unknown field "${key}"`);
 	};
-	const checkSize = (obj, path) => {
-		if (obj.size !== void 0 && !SIZES.includes(obj.size)) error("invalid-value", `${path}/size`, `"size" must be one of: ${SIZES.join(", ")}`);
+	const checkArea = (obj, path) => {
+		if (obj.at === void 0) {
+			error("missing-field", path, "\"at\" is required: the block's cell or range on the 6×6 grid, like \"A1:C2\"");
+			return;
+		}
+		if (typeof obj.at !== "string") {
+			error("invalid-type", `${path}/at`, "\"at\" must be a string like \"A1:C2\"");
+			return;
+		}
+		const area = readArea(obj.at);
+		if (typeof area === "string") {
+			error("invalid-value", `${path}/at`, area);
+			return;
+		}
+		return area;
 	};
 	const checkMeta = (obj, path) => {
 		if (obj.meta !== void 0 && !isObject(obj.meta)) error("invalid-type", `${path}/meta`, "\"meta\" must be an object");
@@ -120,6 +180,7 @@ function validateDocument(input) {
 			return;
 		}
 		if (value.length > 6) error("too-many-blocks", path, `${value.length} blocks on one level, at most 6 allowed. Group some of them into a parent block.`);
+		const placed = [];
 		value.forEach((block, i) => {
 			const bp = `${path}/${i}`;
 			if (!isObject(block)) {
@@ -131,7 +192,15 @@ function validateDocument(input) {
 			checkString(block, "description", bp, false);
 			checkString(block, "details", bp, false);
 			checkString(block, "icon", bp, false);
-			checkSize(block, bp);
+			const area = checkArea(block, bp);
+			if (area) {
+				const other = placed.find((p) => overlap(p.area, area));
+				if (other) error("overlap", `${bp}/at`, `Blocks "${String(other.id)}" and "${String(block.id)}" overlap at ${overlap(other.area, area)}`);
+				placed.push({
+					id: block.id,
+					area
+				});
+			}
 			checkMeta(block, bp);
 			checkUnknown(block, BLOCK_FIELDS, bp);
 			if (typeof block.id === "string" && block.id !== "") {
@@ -187,80 +256,6 @@ function validateDocument(input) {
 /** Formats issues as `path: message` lines, for logs and CLI output. */
 function formatIssues(issues) {
 	return issues.map((i) => `${i.severity} ${i.path || "/"}: ${i.message}`).join("\n");
-}
-// node_modules/@takesix/core/dist/migrate.js
-function isLegacyDocument(input) {
-	return Array.isArray(input);
-}
-/**
-* Converts the legacy entity array into a v1 document. Per-entity
-* `connections` become document-level links with ids `"<from>-><to>"`.
-* A `list` layout becomes full-width children (`size: "F"`); `tiles` and
-* `circle` have no equivalent and keep the default size.
-*/
-function migrateLegacy(entities, title = "Untitled") {
-	const links = [];
-	const convert = (list, parentLayout) => list.map((e) => {
-		for (const to of e.connections ?? []) links.push({
-			id: `${e.id}->${to}`,
-			from: e.id,
-			to
-		});
-		const block = {
-			id: e.id,
-			title: e.title
-		};
-		if (e.description) block.description = e.description;
-		if (e.icon) block.icon = e.icon;
-		if (parentLayout === "list") block.size = "F";
-		if (e.children?.length) block.children = convert(e.children, e.layout);
-		return block;
-	});
-	const doc = {
-		takesix: "1.0",
-		title,
-		blocks: convert(entities)
-	};
-	if (links.length) doc.links = links;
-	return doc;
-}
-// node_modules/@takesix/core/dist/parse.js
-/**
-* Reads a document from JSON text or an already parsed value: parses,
-* migrates older formats and validates. Never throws.
-*/
-function parseDocument(input) {
-	let value = input;
-	if (typeof input === "string") try {
-		value = JSON.parse(input);
-	} catch (e) {
-		return {
-			ok: false,
-			issues: [{
-				severity: "error",
-				code: "invalid-type",
-				path: "",
-				message: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}`
-			}]
-		};
-	}
-	let migratedFrom;
-	if (isLegacyDocument(value)) {
-		value = migrateLegacy(value);
-		migratedFrom = "legacy";
-	}
-	const { valid, issues } = validateDocument(value);
-	if (!valid) return {
-		ok: false,
-		issues
-	};
-	const result = {
-		ok: true,
-		document: value,
-		issues
-	};
-	if (migratedFrom) result.migratedFrom = migratedFrom;
-	return result;
 }
 // node_modules/@takesix/core/dist/links.js
 /**
@@ -333,6 +328,242 @@ function visibleLinks(doc, parentId, index = buildIndex(doc)) {
 		};
 	});
 }
+// node_modules/@takesix/core/dist/query.js
+/** Blocks shown on the screen of `parentId` (`null` = top level). Empty if not found. */
+function getLevel(doc, parentId, index = buildIndex(doc)) {
+	if (parentId === null) return doc.blocks;
+	return index.get(parentId)?.block.children ?? [];
+}
+// node_modules/@takesix/core/dist/layout.js
+/** Gap between cells, in cell units. */
+var GAP = .25;
+var lineStart = (i) => i * 1.25;
+var lineEnd = (i, n) => (i + n) * 1.25 - GAP;
+function box(area) {
+	return {
+		left: lineStart(area.col),
+		right: lineEnd(area.col, area.width),
+		top: lineStart(area.row),
+		bottom: lineEnd(area.row, area.height)
+	};
+}
+/** Middle of the cells shared by two ranges `[s1, s1 + n1)` and `[s2, s2 + n2)`, or `undefined`. */
+function sharedMiddle(s1, n1, s2, n2) {
+	const start = Math.max(s1, s2);
+	const end = Math.min(s1 + n1, s2 + n2);
+	return start < end ? (lineStart(start) + lineEnd(start, end - start)) / 2 : void 0;
+}
+/** The line an arrow between two non-overlapping areas roughly follows. */
+function arrowSegment(a, b) {
+	const ra = box(a);
+	const rb = box(b);
+	const y = sharedMiddle(a.row, a.height, b.row, b.height);
+	if (y !== void 0) return a.col < b.col ? [{
+		x: ra.right,
+		y
+	}, {
+		x: rb.left,
+		y
+	}] : [{
+		x: ra.left,
+		y
+	}, {
+		x: rb.right,
+		y
+	}];
+	const x = sharedMiddle(a.col, a.width, b.col, b.width);
+	if (x === void 0) {
+		const ay = (ra.top + ra.bottom) / 2;
+		const by = (rb.top + rb.bottom) / 2;
+		return a.col < b.col ? [{
+			x: ra.right,
+			y: ay
+		}, {
+			x: rb.left,
+			y: by
+		}] : [{
+			x: ra.left,
+			y: ay
+		}, {
+			x: rb.right,
+			y: by
+		}];
+	}
+	return b.row > a.row ? [{
+		x,
+		y: ra.bottom
+	}, {
+		x,
+		y: rb.top
+	}] : [{
+		x,
+		y: ra.top
+	}, {
+		x,
+		y: rb.bottom
+	}];
+}
+/** Whether a segment passes through the inside of an area (touching an edge does not count). */
+function crossesArea([p, q], area) {
+	const e = .01;
+	const r = box(area);
+	const left = r.left + e;
+	const right = r.right - e;
+	const top = r.top + e;
+	const bottom = r.bottom - e;
+	let t0 = 0;
+	let t1 = 1;
+	const dx = q.x - p.x;
+	const dy = q.y - p.y;
+	const edges = [
+		[-dx, p.x - left],
+		[dx, right - p.x],
+		[-dy, p.y - top],
+		[dy, bottom - p.y]
+	];
+	for (const [pe, qe] of edges) {
+		if (pe === 0) {
+			if (qe < 0) return false;
+			continue;
+		}
+		const t = qe / pe;
+		if (pe < 0) t0 = Math.max(t0, t);
+		else t1 = Math.min(t1, t);
+		if (t0 > t1) return false;
+	}
+	return true;
+}
+var cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+/** Whether two segments cross at a single point inside both (shared ends and collinear runs do not count). */
+function segmentsCross([a, b], [c, d]) {
+	const d1 = cross(c, d, a);
+	const d2 = cross(c, d, b);
+	const d3 = cross(a, b, c);
+	const d4 = cross(a, b, d);
+	return d1 * d2 < 0 && d3 * d4 < 0;
+}
+/**
+* Layout problems of the screen of `parentId` (`null` = top level): arrows
+* that run through a third block and arrows that cross each other, including
+* arrows merged from nested links. Editors show them next to the arrows.
+*/
+function levelLayoutIssues(doc, parentId, index = buildIndex(doc)) {
+	const areas = levelAreas(getLevel(doc, parentId, index));
+	const arrows = visibleLinks(doc, parentId, index).flatMap((link) => {
+		const a = areas.get(link.from);
+		const b = areas.get(link.to);
+		return a && b ? [{
+			link,
+			segment: arrowSegment(a, b)
+		}] : [];
+	});
+	const name = (link) => `"${link.from}" → "${link.to}"`;
+	const issues = [];
+	for (const { link, segment } of arrows) for (const [id, area] of areas) {
+		if (id === link.from || id === link.to || !crossesArea(segment, area)) continue;
+		issues.push({
+			code: "arrow-crosses-block",
+			message: `Arrow ${name(link)} has block "${id}" in its way: place the two blocks next to each other`,
+			arrows: [link.key],
+			blocks: [id]
+		});
+	}
+	arrows.forEach((first, i) => {
+		for (const second of arrows.slice(i + 1)) {
+			if ([first.link.from, first.link.to].some((id) => id === second.link.from || id === second.link.to) || !segmentsCross(first.segment, second.segment)) continue;
+			issues.push({
+				code: "arrows-cross",
+				message: `Arrows ${name(first.link)} and ${name(second.link)} cross`,
+				arrows: [first.link.key, second.link.key],
+				blocks: []
+			});
+		}
+	});
+	return issues;
+}
+/**
+* Layout advice for a whole valid document: {@link levelLayoutIssues} of
+* every level. Only warnings: the document is fine, but its screens are
+* harder to read. Paths point at the level.
+*/
+function lintLayout(doc) {
+	const index = buildIndex(doc);
+	const issues = [];
+	const checkLevel = (parentId, blocks, path) => {
+		for (const { code, message } of levelLayoutIssues(doc, parentId, index)) issues.push({
+			severity: "warning",
+			code,
+			message,
+			path
+		});
+		blocks.forEach((block, i) => {
+			if (block.children?.length) checkLevel(block.id, block.children, `${path}/${i}/children`);
+		});
+	};
+	checkLevel(null, doc.blocks, "/blocks");
+	return issues;
+}
+// node_modules/@takesix/core/dist/parse.js
+/**
+* Reads a document from JSON text or an already parsed value: parses and
+* validates. Never throws.
+*/
+function parseDocument(input) {
+	let value = input;
+	if (typeof input === "string") try {
+		value = JSON.parse(input);
+	} catch (e) {
+		return {
+			ok: false,
+			issues: [{
+				severity: "error",
+				code: "invalid-type",
+				path: "",
+				message: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}`
+			}]
+		};
+	}
+	const { valid, issues } = validateDocument(value);
+	if (!valid) return {
+		ok: false,
+		issues
+	};
+	return {
+		ok: true,
+		document: value,
+		issues
+	};
+}
+// src/layout.ts
+/**
+* Layout advice for a valid document, one line each (arrows with a block in
+* their way, arrows that cross), with a heading; empty when there is none.
+*/
+function layoutHints(doc) {
+	const issues = lintLayout(doc);
+	if (!issues.length) return "";
+	return `Layout hints (the document is valid, but these screens read worse):\n${formatIssues(issues)}\n`;
+}
+/** Width of a cell in the sketch. */
+var CELL = 10;
+/**
+* Every level as a text grid: each cell shows the id of the block covering it,
+* `·` an empty cell. Lets an agent check its placement before rendering.
+*/
+function sketch(doc) {
+	const out = [];
+	const level = (blocks, title, depth) => {
+		const indent = "  ".repeat(depth);
+		const grid = Array.from({ length: 6 }, () => Array(6).fill("·"));
+		for (const [id, a] of levelAreas(blocks)) for (let r = a.row; r < a.row + a.height; r++) for (let c = a.col; c < a.col + a.width; c++) grid[r][c] = id.slice(0, 9);
+		out.push(`${indent}${title}`);
+		out.push(`${indent}    ${"ABCDEF".split("").map((c) => c.padEnd(CELL)).join("").trimEnd()}`);
+		grid.forEach((row, r) => out.push(`${indent} ${r + 1}  ${row.map((c) => c.padEnd(CELL)).join("").trimEnd()}`));
+		for (const block of blocks) if (block.children?.length) level(block.children, block.title, depth + 1);
+	};
+	level(doc.blocks, doc.title, 0);
+	return out.join("\n") + "\n";
+}
 // src/render.ts
 var escapeHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 /**
@@ -373,6 +604,7 @@ function summarize(doc) {
 // src/cli.ts
 var USAGE = `Usage:
   takesix validate <file.json>              check a document, list problems with paths
+  takesix sketch <file.json>                print every level's 6×6 grid as text
   takesix render <file.json> [-o out.html]  validate, then write one self-contained HTML page`;
 var assets = join(dirname(fileURLToPath(import.meta.url)), "..", "assets");
 function load(file) {
@@ -390,15 +622,22 @@ function load(file) {
 		process.exit(1);
 	}
 	if (result.issues.length) console.error(formatIssues(result.issues));
+	const hints = layoutHints(result.document);
+	if (hints) console.error(hints.trimEnd());
 	return result.document;
 }
 var [command, file, ...rest] = process.argv.slice(2);
-if (!command || !file || !["validate", "render"].includes(command)) {
+if (!command || !file || ![
+	"validate",
+	"sketch",
+	"render"
+].includes(command)) {
 	console.error(USAGE);
 	process.exit(2);
 }
 var doc = load(file);
 if (command === "validate") console.log(`OK: ${summarize(doc)}`);
+else if (command === "sketch") process.stdout.write(sketch(doc));
 else {
 	const o = rest.indexOf("-o");
 	const out = resolve(o >= 0 && rest[o + 1] ? rest[o + 1] : join(dirname(file), basename(file).replace(/(\.takesix)?\.json$/, "") + ".html"));

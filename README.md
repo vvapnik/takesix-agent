@@ -31,7 +31,9 @@ What it offers:
 - **`guide`** tool: the format and the rules that make a diagram readable (the
   text of the skill). The server's instructions tell the agent to read it first.
 - **`validate`** tool: checks a document (as JSON or a `.takesix.json` path),
-  lists problems with their JSON paths, or sums up the diagram's shape.
+  lists problems with their JSON paths, or sums up the diagram's shape. A
+  valid document can still get layout hints: arrows with a block in their way,
+  arrows that cross.
 - **`show`** tool: validates, writes one self-contained HTML file and returns
   its path. Where MCP Apps are supported, the diagram opens in the
   conversation, with a full screen button.
@@ -64,11 +66,15 @@ Then ask for an overview of something structured — a codebase, a spec, a plan
 
 ```bash
 node skill/takesix/scripts/takesix.mjs validate answer.takesix.json
+node skill/takesix/scripts/takesix.mjs sketch answer.takesix.json
 node skill/takesix/scripts/takesix.mjs render answer.takesix.json -o answer.html
 ```
 
 - `validate` lists problems with JSON paths, so the agent can fix them, and on
-  success prints a one-line summary of the diagram's shape.
+  success prints a one-line summary of the diagram's shape, plus layout hints
+  when an arrow has a block in its way or arrows cross.
+- `sketch` prints every level as a text grid, so the agent can check where its
+  blocks sit on the 6×6 grid before rendering.
 - `render` validates, then writes **one self-contained HTML file**: the
   document and the viewer (React and `@takesix/react`) are inlined, so it opens
   from disk, without a network, and works as an artifact.
