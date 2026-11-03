@@ -72,7 +72,9 @@ node skill/takesix/scripts/takesix.mjs render answer.takesix.json -o answer.html
 
 - `validate` lists problems with JSON paths, so the agent can fix them, and on
   success prints a one-line summary of the diagram's shape, plus layout hints
-  when an arrow has a block in its way or arrows cross.
+  when an arrow has a block in its way, arrows cross, or a title or
+  description is longer than its block shows (budgets measured on a
+  MacBook Pro 13" screen).
 - `sketch` prints every level as a text grid, so the agent can check where its
   blocks sit on the 6×6 grid before rendering.
 - `render` validates, then writes **one self-contained HTML file**: the

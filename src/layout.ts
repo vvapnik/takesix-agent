@@ -5,9 +5,51 @@ import { GRID_SIZE, formatIssues, levelAreas, lintLayout, type Block, type TakeS
  * their way, arrows that cross), with a heading; empty when there is none.
  */
 export function layoutHints(doc: TakeSixDocument): string {
-  const issues = lintLayout(doc)
-  if (!issues.length) return ''
-  return `Layout hints (the document is valid, but these screens read worse):\n${formatIssues(issues)}\n`
+  const issues = formatIssues(lintLayout(doc))
+  const text = textHints(doc)
+  if (!issues && !text.length) return ''
+  return `Layout hints (the document is valid, but these screens read worse):\n${[issues, ...text].filter(Boolean).join('\n')}\n`
+}
+
+// How much text a card shows at full size on the reference screen (MacBook
+// Pro 13", a 1440×790 browser viewport), with an icon and "N more inside",
+// by the block's width in columns: characters on a line of the title and of
+// the description. Measured in the viewer, Cyrillic (a little wider than
+// Latin) rounded down.
+const TITLE_CHARS = [15, 40, 65, 85, 110, 130]
+const DESCRIPTION_CHARS = [19, 50, 85, 110, 140, 165]
+
+/** Description lines a card of this size shows: one per one-row card, more per row. */
+const descriptionLines = (width: number, height: number) =>
+  height === 1 ? (width === GRID_SIZE ? 2 : 1) : 1 + 6 * (height - 1)
+
+/**
+ * Blocks whose title or description is longer than their card shows: the
+ * viewer ends the description with "…". One `warning path: message` line each.
+ */
+export function textHints(doc: TakeSixDocument): string[] {
+  const out: string[] = []
+  const level = (blocks: Block[], path: string) => {
+    const areas = levelAreas(blocks)
+    blocks.forEach((block, i) => {
+      const a = areas.get(block.id)
+      if (a) {
+        const size = `${a.width}×${a.height}`
+        const titleFits = TITLE_CHARS[a.width - 1]! * (a.height === 1 ? 1 : 2)
+        if (block.title.length > titleFits) {
+          out.push(`warning ${path}/${i}/title: Title of "${block.id}" (${size}) has ${block.title.length} characters, about ${titleFits} fit; shorten it or widen the block`)
+        }
+        const descriptionFits = DESCRIPTION_CHARS[a.width - 1]! * descriptionLines(a.width, a.height)
+        const length = block.description?.length ?? 0
+        if (length > descriptionFits) {
+          out.push(`warning ${path}/${i}/description: Description of "${block.id}" (${size}) has ${length} characters, about ${descriptionFits} fit and the rest ends in "…"; shorten it, move the rest to details, or widen the block`)
+        }
+      }
+      if (block.children?.length) level(block.children, `${path}/${i}/children`)
+    })
+  }
+  level(doc.blocks, '/blocks')
+  return out
 }
 
 /** Width of a cell in the sketch. */
