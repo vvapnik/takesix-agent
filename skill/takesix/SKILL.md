@@ -143,6 +143,12 @@ you put a block.
   description. Give more only to the block the level is about (a tall or wide
   block draws the eye first). A one-row block holds a title and one line of
   description (see the text budget above); size the block for its text.
+- **No bigger than the text needs.** A block much wider or taller than its
+  title and description reads as an empty box. Pick the smallest size from
+  the budget table that holds the text — usually two columns, one row — and
+  widen it only when the text needs it. Do not stretch a block to fill a row
+  or to run alongside a group of blocks: leave that space free; it still
+  balances the screen.
 - **One-column blocks only when the shape needs them** — three blocks in a
   row with free columns between, a hub with neighbours beside it. Then keep
   their text to the one-column budget (a title of one or two short words, a
@@ -208,8 +214,9 @@ Hub in the middle               Steps of a plan, top to bottom
   over rows 1, 3, 5.
 - **Hub** (one central thing and its neighbours): the hub `h` in the middle,
   the neighbours straight above, below and beside it, with free cells between.
-- **Steps** (plans, roadmaps): wide blocks on rows 1, 3, 5, optionally shifted
-  right step by step so the eye follows them down.
+- **Steps** (plans, roadmaps): blocks on rows 1, 3, 5, each shifted right so
+  the eye follows them down; as wide as their text needs (two to four
+  columns), every step the same width.
 - **Peers without links** (services, entities): tiles with free cells between
   them, e.g. `"A1:B1"`, `"E1:F1"`, `"A3:B3"`, `"E3:F3"`.
 
