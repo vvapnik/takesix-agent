@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import { App, type McpUiHostContext } from '@modelcontextprotocol/ext-apps'
-import { TakeSix } from '@takesix/react'
+import { TakeSix, type MenuOptions } from '@takesix/react'
 import '@takesix/react/style.css'
 import { parseDocument, type TakeSixDocument } from '@takesix/core'
 import { DOCUMENT_META_KEY } from './shared.js'
@@ -35,13 +35,21 @@ function height(context: McpUiHostContext | undefined): string {
   return `${INLINE_HEIGHT}px`
 }
 
+// The host's sandbox blocks new tabs and downloads: ask the host for both
+const MENU: MenuOptions = {
+  openLink: url => void app.openLink({ url }),
+  download: ({ name, mimeType, text }) => void app.downloadFile({
+    contents: [{ type: 'resource', resource: { uri: `file:///${name}`, mimeType, text } }],
+  }),
+}
+
 function View({ doc, error, context }: State) {
   const fullscreen = context?.displayMode === 'fullscreen'
   const canFullscreen = context?.availableDisplayModes?.includes('fullscreen')
   const theme = context?.theme === 'dark' ? 'dark' : context?.theme === 'light' ? 'light' : 'auto'
   return (
     <div className="frame" data-theme={theme} style={{ height: height(context) }}>
-      {doc ? <TakeSix document={doc} theme={theme} /> : <p className="status">{error ?? 'Waiting for the diagram…'}</p>}
+      {doc ? <TakeSix document={doc} theme={theme} menu={MENU} /> : <p className="status">{error ?? 'Waiting for the diagram…'}</p>}
       {doc && canFullscreen && (
         <button
           className="mode"
