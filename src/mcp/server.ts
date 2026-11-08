@@ -5,6 +5,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { RESOURCE_MIME_TYPE, registerAppResource, registerAppTool } from '@modelcontextprotocol/ext-apps/server'
 import { formatIssues, parseDocument, type TakeSixDocument } from '@takesix/core'
+import { PRELOADER_HTML } from '@takesix/react/preloader'
 import { z } from 'zod'
 import { renderHtml } from '../render.js'
 import { layoutHints } from '../layout.js'
@@ -83,7 +84,7 @@ export function viewHtml(assets: Pick<Assets, 'appJs' | 'appCss'>): string {
 <style>${assets.appCss}</style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">${PRELOADER_HTML}</div>
 <script>${assets.appJs}</script>
 </body>
 </html>

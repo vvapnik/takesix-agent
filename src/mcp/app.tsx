@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import { App, type McpUiHostContext } from '@modelcontextprotocol/ext-apps'
 import { TakeSix, type MenuOptions } from '@takesix/react'
+import { PRELOADER_HTML, preloaderErrorHtml } from '@takesix/react/preloader'
 import '@takesix/react/style.css'
 import { parseDocument, type TakeSixDocument } from '@takesix/core'
 import { DOCUMENT_META_KEY } from './shared.js'
@@ -49,7 +50,10 @@ function View({ doc, error, context }: State) {
   const theme = context?.theme === 'dark' ? 'dark' : context?.theme === 'light' ? 'light' : 'auto'
   return (
     <div className="frame" data-theme={theme} style={{ height: height(context) }}>
-      {doc ? <TakeSix document={doc} theme={theme} menu={MENU} /> : <p className="status">{error ?? 'Waiting for the diagram…'}</p>}
+      {doc
+        ? <TakeSix document={doc} theme={theme} menu={MENU} />
+        // The same loading screen the page showed before the script ran, or why there is no diagram
+        : <div className="status" dangerouslySetInnerHTML={{ __html: error ? preloaderErrorHtml(error) : PRELOADER_HTML }} />}
       {doc && canFullscreen && (
         <button
           className="mode"

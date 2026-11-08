@@ -28,6 +28,10 @@ describe('renderHtml', () => {
     expect(html).not.toMatch(/src=|href=/)
   })
 
+  it('shows a loading screen in place of the viewer until it renders', () => {
+    expect(html).toMatch(/<div id="root"><div class="takesix-preloader" role="status"[^]*<\/svg><\/div><\/div>/)
+  })
+
   it('escapes the title', () => {
     expect(html).toContain('<title>A &lt;b&gt;&quot;quoted&quot;&lt;/b&gt; title</title>')
   })

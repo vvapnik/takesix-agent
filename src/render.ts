@@ -1,10 +1,12 @@
 import type { TakeSixDocument } from '@takesix/core'
+import { PRELOADER_HTML } from '@takesix/react/preloader'
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 /**
  * One self-contained HTML page: the document as JSON plus the inlined viewer.
+ * Until the viewer renders, a loading screen without script shows instead.
  * `<` in the JSON is escaped, so no text in the document can close the
  * <script> element and inject markup.
  */
@@ -21,7 +23,7 @@ export function renderHtml(doc: TakeSixDocument, viewerJs: string, viewerCss: st
 <style>${viewerCss}</style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">${PRELOADER_HTML}</div>
 <script type="application/json" id="takesix-data">${json}</script>
 <script>${viewerJs}</script>
 </body>
