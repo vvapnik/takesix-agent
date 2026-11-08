@@ -10,13 +10,15 @@ import { z } from 'zod'
 import { renderHtml } from '../render.js'
 import { layoutHints } from '../layout.js'
 import { summarize } from '../summary.js'
-import { guideText } from './guide.js'
+import { BLUEPRINT_TYPES, blueprintText, guideText, type BlueprintType } from './guide.js'
 import { DOCUMENT_META_KEY, VIEW_URI } from './shared.js'
 
 /** Texts the server hands out; read from the package by main.ts. */
 export interface Assets {
   version: string
   skillMd: string
+  /** The blueprint files of the skill, and the epic example (JSON). */
+  blueprints: Record<BlueprintType, string>
   formatMd: string
   schemaJson: string
   /** Viewer for the HTML files `show` writes. */
@@ -96,9 +98,15 @@ export function createServer(assets: Assets): McpServer {
 
   server.registerTool('guide', {
     title: 'How to write a TakeSix diagram',
-    description: 'The format and the rules that make a TakeSix diagram readable. Read it once before writing your first diagram in a conversation.',
+    description: 'The format and the rules that make a TakeSix diagram readable. Read it once before writing your first diagram in a conversation, then once more with the `type` of each kind of diagram you draw: its blueprint (layout, arrows, levels).',
+    inputSchema: {
+      type: z.enum(BLUEPRINT_TYPES).optional().describe(
+        'The blueprint to read: basic (peers, centred tiles), architecture, plan (to-do, roadmap, talk outline), flowchart (algorithm), or epic for an example that combines them. Leave out for the general guide.'),
+    },
     annotations: { readOnlyHint: true },
-  }, async () => ({ content: [{ type: 'text', text: guideText(assets.skillMd) }] }))
+  }, async ({ type }) => ({
+    content: [{ type: 'text', text: type ? blueprintText(type, assets.blueprints[type]) : guideText(assets.skillMd) }],
+  }))
 
   server.registerTool('validate', {
     title: 'Check a TakeSix document',

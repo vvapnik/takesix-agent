@@ -8,8 +8,9 @@ compatibility: Needs Node.js 18+ to run the bundled scripts/takesix.mjs (no npm 
 
 A TakeSix diagram shows **at most six blocks on a screen**. Every block can open
 into up to six more, as deep as needed. The reader gets the gist on the first
-screen and clicks for depth, instead of scrolling through pages of prose. Links
-between blocks are drawn on every level; long text hides in a details panel.
+screen and clicks for depth, instead of scrolling through pages of prose.
+Arrows join the blocks of one screen. A block that needs explaining in prose
+opens into that text instead of more blocks.
 
 Your answer is a JSON document. A bundled script checks it and turns it into one
 HTML file that opens anywhere.
@@ -18,12 +19,15 @@ HTML file that opens anywhere.
 
 1. **Understand the subject first.** Read the code, document or plan you are
    explaining. The diagram is only as good as the understanding behind it.
-2. **Design the tree before writing JSON.** Answer the user's question with the
+2. **Pick a blueprint** for the top level (see "Pick a blueprint" below) and
+   read its file in `references/blueprints/`: it says how to lay out the
+   level, where arrows go and how to divide into levels.
+3. **Design the tree before writing JSON.** Answer the user's question with the
    top level: 3–6 blocks that together say the whole thing. Then, for each block,
    ask "what would the reader want when they click this?" and give it up to six
-   children. Two or three levels are usually enough; stop when a block is
-   self-explanatory.
-3. **Lay out each level on its 6×6 grid** (see Layout below): sketch where
+   children (see Nesting below: a block may switch to another blueprint). Two
+   to four levels are usually enough; stop when a block is self-explanatory.
+   Lay out each level on its 6×6 grid as its blueprint says: sketch where
    every block goes and trace every arrow before writing JSON.
 4. **Write the document** to a file named `<topic>.takesix.json` (format below,
    full spec in `references/format.md`).
@@ -33,8 +37,8 @@ HTML file that opens anywhere.
    ```
    Errors come with JSON paths (`/blocks/2/children: 7 blocks on one level…`,
    `/blocks/3/at: Blocks "api" and "db" overlap at C2`). On success it prints a
-   one-line summary; if it says arrows on the top level are *merged from
-   nested links*, check those links are worth showing there (see Links below).
+   one-line summary; if it says some links join blocks of different levels,
+   link the blocks that contain them instead: such links are never drawn.
    **Layout hints** (an arrow with a block in its way, arrows that cross) do
    not fail validation, but fix them: move the blocks and validate again.
    To see what you placed, print every level as a text grid:
@@ -45,8 +49,16 @@ HTML file that opens anywhere.
    ```bash
    node <this-skill-dir>/scripts/takesix.mjs render <topic>.takesix.json -o <topic>.html
    ```
-   The page has the viewer inlined: no network, no install. Where you can show
-   files or publish an HTML artifact, show this file; otherwise give its path.
+   The page has the viewer inlined: no network, no install. Hand the user this
+   file itself, so they can open and share it, not only its path:
+   - **In a sandbox with an outputs folder** (claude.ai and other chat apps
+     with code execution, where `/mnt/user-data/outputs/` exists): render
+     straight into it, `-o /mnt/user-data/outputs/<topic>.html`, and present
+     that file (e.g. with `present_files`). A file anywhere else in the
+     sandbox is invisible to the user.
+   - **Where you can publish an HTML artifact or send files:** do that with
+     this file.
+   - **Only on the user's own machine** (a CLI or IDE agent): give the path.
 7. **Reply briefly: the diagram is the answer.** At most three sentences, under
    80 words, plus the file path: what the diagram covers in one line, and which
    block to open first and why. No lists, no headings, and do not name the
@@ -70,26 +82,78 @@ HTML file that opens anywhere.
       "icon": "⬡",
       "title": "Public API",
       "description": "REST endpoints the shop calls",
-      "details": "Versioned by path (`/v1/…`). Errors follow **RFC 9457**.",
       "children": [ { "id": "api-charge", "at": "A3:B3", "title": "POST /charges", "description": "Creates a charge" } ]
     },
-    { "id": "worker", "at": "E2:F2", "title": "Settlement worker", "description": "Talks to the bank" }
+    {
+      "id": "worker", "at": "E2:F2", "title": "Settlement worker", "description": "Talks to the bank",
+      "details": "Runs every 5 minutes. Retries a failed transfer **three times**, then flags it."
+    }
   ],
-  "links": [ { "from": "api-charge", "to": "worker", "label": "queue" } ]
+  "links": [ { "from": "api", "to": "worker", "label": "queue" } ]
 }
 ```
 
 - **Document:** `takesix: "1.0"`, `title`, `description`, `blocks` (≤6), `links`.
 - **Block:** `id` (unique in the whole document), `at`, `title`,
-  `description`, and optionally `icon` (one emoji or character), `details`,
-  `children` (≤6).
+  `description`, and optionally `icon` (one emoji or character), `shape` (a
+  flowchart symbol: `terminator`, `decision`, `io`, `subprocess`,
+  `loop-start`, `loop-end`; a plain card by default), and either `children`
+  (≤6) or `details` (Markdown text) — never both.
 - **Place** (`at`, required): every level is a grid of 6 columns `A`–`F` and
   6 rows `1`–`6`, like a spreadsheet. A block covers one cell (`"B3"`) or a
   rectangle, top-left and bottom-right corners included (`"A1:C2"` is three
   columns wide, two rows tall). Blocks of one level must not overlap. The order
   of the array does not matter; the grid alone decides where a block is.
-- **Link:** `from`, `to` (block ids on any levels), optional `label`,
-  `direction`: `forward` (default), `both`, `none`.
+- **Link:** `from`, `to` (ids of two blocks of one level), optional `label`,
+  `direction`: `forward` (default), `both`, `none`, and `style`: `solid`
+  (default), `dashed`, `dotted`.
+
+## Pick a blueprint
+
+Each kind of diagram has its own layout and its own rules for arrows. Pick
+one for the top level and read its file before laying out; a block deeper
+down may take another one (see Nesting).
+
+| The subject | Blueprint | File |
+|---|---|---|
+| Peers with no order: parts, domains, options, subtasks | Basic blocks: centred, room between | `references/blueprints/basic.md` |
+| A system, a codebase, infrastructure | Architecture: layers along the request, a hub, a tree | `references/blueprints/architecture.md` |
+| A plan, a to-do list, the outline of a talk | Plan: a staircase, each step one column to the right | `references/blueprints/plan.md` |
+| An algorithm, a procedure with conditions and loops | Flowchart: ISO 5807 shapes, one main column | `references/blueprints/flowchart.md` |
+
+When unsure, take basic blocks.
+
+## Nesting
+
+A block opens into children for one of two reasons, and they decide how the
+children look.
+
+1. **Grouping.** The things did not fit on the level above (more than six),
+   or reading them is easier in groups. The children are more of the same,
+   so they keep the parent level's blueprint: the same style, the same
+   direction (a staircase stays a staircase going the same way, tiles stay
+   tiles). Peers on one screen lay out their children alike, so the reader
+   knows where they are without reading.
+2. **Composition.** The block is a thing of its own, and its inside is
+   another kind of content: a milestone holds tasks, a task holds a system,
+   a service holds its algorithm. The children then take the blueprint that
+   fits them.
+
+**Text is the bottom of a branch.** A TakeSix diagram is read by opening
+blocks; text is what is left when the reader has reached the end of a
+branch: the code, the numbers, the reasoning. So long text goes to the
+`details` of leaf blocks, and a block with children has only its one-line
+`description` (see "Blocks or text" below).
+
+Example of composition, an epic (`references/blueprints/epic.takesix.json`):
+
+```
+Epic: card payments                    plan: milestones as a staircase, status icons
+└─ Build ⏳                            basic: the milestone's tasks as tiles
+   └─ Payment API                      architecture: gateway → service → database, Stripe beside
+      └─ Charge service                flowchart: request → Stripe → Approved? → save / decline
+         └─ Save the charge            details: the SQL snippet and why it is idempotent
+```
 
 ## How to make it readable
 
@@ -102,9 +166,10 @@ the reader sees, so keep the viewer in mind while writing.
   description for the document and for every block with children: it is the
   first sentence the reader sees on that screen. Do not add an "Overview" block
   for this.
-- A card shows only icon, title, one line of description and "N more inside".
-  Children are not previewed, so the title and description must say what is
-  inside.
+- A card shows only icon, title, one line of description and what it opens
+  into: "N more inside" for children, "Read" for text. Children are not
+  previewed, so the title and description must say what is inside. The
+  opened screen shows the block's whole description in its header.
 - **Text must fit the block's size.** A card never shrinks its text: a
   description longer than the card holds is cut off with "…", and a long
   title pushes the description out. Budget per block width (characters, measured on a
@@ -121,104 +186,67 @@ the reader sees, so keep the viewer in mind while writing.
   description — if the block needs more, make it wider, not the text smaller.
   `validate` warns about every title and description over its budget.
 - `description` is one short line. Anything longer — explanations, code,
-  lists, caveats — goes into `details`. It is a small Markdown subset:
+  lists, caveats — goes into `details`: the block then opens into that text,
+  on a screen of its own, instead of into blocks. It is a small Markdown subset:
   headings, paragraphs, `-` and `1.` lists, `code`, **bold**, *italic*, fenced
   code and `https` links. **No tables and no HTML**: they show as raw text.
   Write a table as a list (`- **0x01** Plant container`).
+
+**Blocks or text: where the parent's text goes**
+- A block opens either into child blocks (`children`) or into text
+  (`details`), never both; `validate` rejects a block with both. When a block
+  with children seems to need text of its own, try these in order:
+  1. **Drop** text that only introduces the children ("This section covers…"):
+     the screen header and the cards already say it.
+  2. **Squeeze** an introductory thought into the block's `description`: it
+     shows in full in the header of the opened screen.
+  3. **Move** real content (constraints, a rationale, an example) into a child
+     block of its own, named for what it says ("Constraints", "Why Postgres"),
+     with the text in its `details`; or into the `details` of the children it
+     is about.
+  4. **Fold**: when the children are small (a title and a few words each),
+     remove them and write what they say as this block's `details`.
+- A text block is a leaf: it has no children. Give it a title and
+  description that tell the reader what they will read.
 
 **Layout: use the whole grid, and space is a tool**
 
 The grid always fills the screen: six equal columns, six equal rows. Empty
 cells stay empty on screen, so where you leave space is as visible as where
-you put a block.
-- **Balance the screen: blocks gather around the middle.** Place them as one
-  composition centred on the grid, with about as much free space to the left
-  as to the right, and above as below; do not pack them into the top-left
-  corner or leave half the screen empty, and do not try to fill every cell.
-  One row of blocks goes in row 3, not row 1; two rows go in rows 2 and 4;
-  a pair of blocks sits in `B:C` and `D:E`, not `A:B` and `C:D`. Keep the
-  gaps that arrows and groups need (below), and centre what is left.
+you put a block. Each blueprint gives the shapes for its kind of diagram;
+these rules hold for all of them.
+- **Balance the screen.** Place the blocks as one composition: do not pack
+  them into the top-left corner or leave half the screen empty, and do not
+  try to fill every cell.
 - **Keep blocks small, but at least two columns wide.** A block of two cells
   side by side (`"A1:B1"`) is the norm: it fits a real title and a line of
   description. Give more only to the block the level is about (a tall or wide
-  block draws the eye first). A one-row block holds a title and one line of
-  description (see the text budget above); size the block for its text.
-- **No bigger than the text needs.** A block much wider or taller than its
-  title and description reads as an empty box. Pick the smallest size from
-  the budget table that holds the text — usually two columns, one row — and
-  widen it only when the text needs it. Do not stretch a block to fill a row
-  or to run alongside a group of blocks: leave that space free; it still
-  balances the screen.
-- **One-column blocks only when the shape needs them** — three blocks in a
-  row with free columns between, a hub with neighbours beside it. Then keep
-  their text to the one-column budget (a title of one or two short words, a
-  few words of description), or rearrange: two blocks per row, two columns
-  each, read better than three cramped ones.
+  block draws the eye first), or when its text needs it (see the budget
+  above). A block much bigger than its text reads as an empty box.
+- **One-column blocks only when the shape needs them**, with text to the
+  one-column budget; otherwise two blocks per row, two columns each, read
+  better than three cramped ones.
 - **Put an empty cell between blocks linked by an arrow.** With a free column
   between them a horizontal arrow has room to read and room for its label; the
   same goes for a free row between blocks linked from top to bottom. Blocks
   that touch get a stub of an arrow and no label.
-- **Distance says how things relate.** Blocks that belong together sit close
-  (side by side, no gap); separate groups get an empty column or row between
-  them. Use it instead of extra boxes or links.
+- **Distance says how things relate.** Blocks that belong together sit close;
+  separate groups get an empty column or row between them. Use it instead of
+  extra boxes or links.
 - On phones the viewer drops empty columns and rows on its own, so gaps cost
   nothing there.
 
 **Arrows on the grid**
 - Arrows run straight between blocks that share a row or a column, and as a
-  smooth curve, side to side, between blocks that share neither. Place linked
-  blocks in the same row or column, or as a branch (diagonal) with a free
-  column between them.
-- **Keep the direction of a flow.** Where a chain of arrows passes through a
-  block, the arrow out goes on the way the arrow in came: straight on, or
-  turned by 45° (a straight arrow followed by a diagonal one, or the other way
-  round). Avoid 90° turns — in from the left, out at the bottom — and never
-  turn back. When a chain is longer than one direction of the grid holds, run
-  it as a staircase (down and to the right), or group its finished or minor
-  steps into one block, instead of wrapping it onto the next row.
-- **Similar blocks get a similar layout inside.** When a block opens into more
-  of what its own screen shows — steps of the same flow grouped into "Done"
-  or "Next", stages of the same plan — its children take the same shape as
-  that screen (the same staircase, the same direction), centred. Blocks that
-  are peers on one screen (two services, two stages) lay out their children
-  alike too. The reader then knows where they are without reading.
-- An arrow must not have a third block in its way, and arrows should not cross.
-  Trace each link on your sketch; `validate` lists both as layout hints.
+  smooth curve, side to side, between blocks that share neither. A straight
+  arrow with a block in its way goes around it: beside the column (the way
+  back of a loop) or below the row, on the side without blocks.
+- Arrows should not cross, and a curved arrow must not have a third block in
+  its way. Trace each link on your sketch; `validate` lists both as layout
+  hints.
 - Read order is left to right, then top to bottom. Put sources on the left (or
-  top) and what they lead to on the right (or below).
-
-**Shapes that work** (`·` is an empty cell)
-```
-Chain, left to right            Branching tree (fan out)
-   A  B  C  D  E  F                A  B  C  D  E  F
-1  ·  ·  ·  ·  ·  ·             1  ·  ·  ·  ·  c1 ·
-2  ·  ·  ·  ·  ·  ·             2  ·  ·  ·  ·  ·  ·
-3  a  ·  b  ·  c  ·             3  r  ·  m  ·  c2 ·
-                                4  ·  ·  ·  ·  ·  ·
-                                5  ·  ·  ·  ·  c3 ·
-
-Hub in the middle               Steps of a plan, top to bottom
-   A  B  C  D  E  F                A  B  C  D  E  F
-1  ·  ·  ·  n1 ·  ·             1  s1 s1 s1 s1 ·  ·
-2  ·  ·  ·  ·  ·  ·             2  ·  ·  ·  ·  ·  ·
-3  n2 ·  ·  h  ·  n3            3  ·  s2 s2 s2 s2 ·
-4  ·  ·  ·  ·  ·  ·             4  ·  ·  ·  ·  ·  ·
-5  ·  ·  ·  n4 ·  ·             5  ·  ·  s3 s3 s3 s3
-```
-- **Chain** (a flow, a pipeline): `"A3"`, `"C3"`, `"E3"`, in the middle row.
-  When the steps need more text than one column holds, or there are more than
-  three, do not wrap them onto the next row (that turns the flow back): use
-  Steps below, or group steps.
-- **Tree** (one thing branching into several): the root `r` on the left, each
-  next step `m` one free column further right, the branches `c1`–`c3` spread
-  over rows 1, 3, 5.
-- **Hub** (one central thing and its neighbours): the hub `h` in the middle,
-  the neighbours straight above, below and beside it, with free cells between.
-- **Steps** (plans, roadmaps): blocks on rows 1, 3, 5, each shifted right so
-  the eye follows them down; as wide as their text needs (two to four
-  columns), every step the same width.
-- **Peers without links** (services, entities): tiles with free cells between
-  them, e.g. `"A1:B1"`, `"E1:F1"`, `"A3:B3"`, `"E3:F3"`.
+  top) and what they lead to on the right (or below). Only a loop in a
+  flowchart goes back.
 
 **Nesting follows meaning**
 - If something is part of something else (a table of a database, an endpoint
@@ -235,27 +263,21 @@ Hub in the middle               Steps of a plan, top to bottom
   domain). A block that does not fit it belongs in another parent, or in
   `details`.
 
-**Links: few, and only where they matter**
-- Every link is drawn on every level where its ends are visible. A link between
-  blocks nested in different parents also appears one level up, as an arrow
-  between those parents (dashed, merged with others). Ten innocent-looking
-  links make a noisy top level.
-- Draw a link only when the relationship is the point. Otherwise say it in a
-  `description` or `details` ("reads from the orders table").
-- Keep the number of arrows on one screen small: about as many as there are
-  blocks, fewer is better. Count them per level, including arrows merged from
-  nested links. When a level has too many, drop the least important ones or
-  regroup the blocks so the related ones end up in one parent.
-- Make arrows flow one way where you can: left to right and top to bottom.
-  Place sources first and consumers after; avoid arrows pointing back up or
-  to the left.
-  If two blocks depend on each other, use one `direction: "both"` link
-  instead of two opposite arrows.
-- In a sequence, link only consecutive blocks (1 → 2 → 3); a link that skips
-  a step has the step in its way.
+**Links: only where they matter**
+- A link joins two blocks of one level. To connect parts deep inside two
+  blocks, link those two blocks on the level they share and name the parts
+  in a description; a link between levels is never drawn.
+- How many arrows a level carries depends on the blueprint: a flowchart links
+  every step, a plan almost none. Everywhere else, draw a link only when the
+  relationship is the point, and keep about as many arrows as blocks.
+- If two blocks depend on each other, use one `direction: "both"` link
+  instead of two opposite arrows. In a sequence, link only consecutive blocks
+  (1 → 2 → 3): a link that skips a step has the step in its way.
 - Labels: an arrow across a free cell has room for a couple of words; an
   arrow between blocks that touch has none. Leave it unlabelled rather than
   overflow onto the cards, or move the blocks apart.
+- `style: "dashed"` sets apart an optional or exceptional path; keep the main
+  path solid.
 
 **Structure**
 - Six is a hard limit (the validator rejects seven). When you have more, group
@@ -263,7 +285,8 @@ Hub in the middle               Steps of a plan, top to bottom
   even when you are under six (see above).
 - Use short, readable, stable ids (`api-charge`, `db-orders`).
 - Icons are optional; when used, keep them consistent (one per kind of thing,
-  or status marks such as ✅ ⏳ ○ for plans).
+  or status marks such as ✅ ⏳ ○ for plans). Flowchart blocks need none: the
+  shape says what they are.
 
 ## Editing an existing diagram
 
@@ -274,4 +297,6 @@ room for a new block, move others with `at`; do not reuse an id.
 ## Reference
 
 - `references/format.md` — the full format specification: every field, the
-  grid, validation rules, how links are shown on each level.
+  grid, validation rules, how links are shown, flowchart symbols.
+- `references/blueprints/` — one file per kind of diagram (see "Pick a
+  blueprint"), and `epic.takesix.json`, an example of composition.

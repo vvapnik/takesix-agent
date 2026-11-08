@@ -42,7 +42,7 @@ export function textHints(doc: TakeSixDocument): string[] {
         const descriptionFits = DESCRIPTION_CHARS[a.width - 1]! * descriptionLines(a.width, a.height)
         const length = block.description?.length ?? 0
         if (length > descriptionFits) {
-          out.push(`warning ${path}/${i}/description: Description of "${block.id}" (${size}) has ${length} characters, about ${descriptionFits} fit and the rest ends in "…"; shorten it, move the rest to details, or widen the block`)
+          out.push(`warning ${path}/${i}/description: Description of "${block.id}" (${size}) has ${length} characters, about ${descriptionFits} fit and the rest ends in "…"; shorten it${block.children ? '' : ', move the rest to details'} or widen the block`)
         }
       }
       if (block.children?.length) level(block.children, `${path}/${i}/children`)

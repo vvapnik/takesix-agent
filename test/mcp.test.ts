@@ -36,6 +36,10 @@ let client: Client
 beforeAll(async () => {
   const server = createServer({
     version: '0.0.0', skillMd: SKILL, formatMd: '# Format', schemaJson: '{}',
+    blueprints: {
+      basic: '# Blueprint: basic', architecture: '# Blueprint: architecture', plan: '# Blueprint: plan',
+      flowchart: '# Blueprint: flowchart', epic: '{ "takesix": "1.0" }',
+    },
     viewerJs: 'VIEWER_JS', viewerCss: 'VIEWER_CSS', appJs: 'APP_JS', appCss: 'APP_CSS',
   })
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair()
@@ -54,6 +58,19 @@ describe('guide', () => {
     expect(out).toContain('Rules go here.')
     expect(out).not.toContain('description: test')
     expect(guideText(SKILL)).toBe(out)
+  })
+
+  it('hands out the blueprint of one kind of diagram, or the epic example', async () => {
+    expect(text(await client.callTool({ name: 'guide', arguments: { type: 'flowchart' } }))).toBe('# Blueprint: flowchart\n')
+    const epic = text(await client.callTool({ name: 'guide', arguments: { type: 'epic' } }))
+    expect(epic).toMatch(/^# Example of composition/)
+    expect(epic).toContain('```json\n{ "takesix": "1.0" }\n```')
+    const bad = await client.callTool({ name: 'guide', arguments: { type: 'mindmap' } })
+    expect(bad.isError).toBe(true)
+  })
+
+  it('tells agents where the blueprints are', async () => {
+    expect(text(await client.callTool({ name: 'guide', arguments: {} }))).toContain('`guide` with a `type`')
   })
 
   it('is announced in the server instructions', () => {

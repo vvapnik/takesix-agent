@@ -30,6 +30,9 @@ What it offers:
 
 - **`guide`** tool: the format and the rules that make a diagram readable (the
   text of the skill). The server's instructions tell the agent to read it first.
+  With a `type` (`basic`, `architecture`, `plan`, `flowchart`) it returns the
+  blueprint for that kind of diagram; `epic` returns an example that combines
+  them.
 - **`validate`** tool: checks a document (as JSON or a `.takesix.json` path),
   lists problems with their JSON paths, or sums up the diagram's shape. A
   valid document can still get layout hints: arrows with a block in their way,
