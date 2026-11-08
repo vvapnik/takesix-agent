@@ -11,7 +11,9 @@ components.
 **Layers top to bottom, along the path of a request.** The thing that starts
 the flow (users, clients) on top, then the layers it passes through, storage
 at the bottom, with an empty row between layers so each arrow has room for
-its label. A cross-cutting concern (operations, security, observability)
+its label. Every hop of the request is a layer of its own, one below the
+other: a gateway in front of the API goes under the clients, not beside them.
+A cross-cutting concern (operations, security, observability)
 stands beside the column, unlinked.
 
 ```
@@ -87,6 +89,9 @@ orders and users"). Configuration, endpoints, schemas and code go to
 - A link from a nested module to a block of another level: it is never
   drawn. Link the blocks that contain them.
 - One giant level with every service: group by layer or domain.
+- An "External" or "Cloud services" block that lumps together parts of
+  different layers (a payment API, object storage, monitoring): put each where
+  it acts, object storage with storage at the bottom, monitoring beside.
 - Infrastructure details (ports, env vars) on cards: they go to `details`.
 - Arrows that point back up for responses: one arrow per flow, in the
   direction of the request.
