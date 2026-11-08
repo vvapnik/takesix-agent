@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: blueprint-plan-release
+expected_outcome: |
+  A release plan as a staircase: each next step one row down and one column to the right, all steps
+  the same width, status shown as icons (✅ ⏳ ○), no arrows along the staircase, notes in details of the
+  steps; valid and rendered to HTML.
