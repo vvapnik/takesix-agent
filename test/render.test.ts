@@ -43,7 +43,7 @@ describe('renderHtml', () => {
 describe('summarize', () => {
   it('describes size, depth, links and what the top level shows', () => {
     expect(summarize(doc)).toBe(
-      '5 blocks on 2 levels, 2 links; top level shows 2 arrows (1 merged from nested links: check they are wanted there)',
+      '5 blocks on 2 levels, 2 links; top level shows 1 arrow; 1 link between levels not drawn: link the blocks that contain them',
     )
   })
 })
@@ -55,7 +55,12 @@ describe('layoutHints', () => {
   })
 
   it('lists arrows with a block in their way', () => {
-    const blocked: TakeSixDocument = { ...doc, links: [{ from: 'a', to: 'c' }] }
+    // A straight arrow goes around a block in its way; a slanted one cannot
+    const blocked: TakeSixDocument = {
+      takesix: '1.0', title: 'T',
+      blocks: [{ id: 'a', title: 'A', at: 'A1' }, { id: 'b', title: 'B', at: 'B2' }, { id: 'c', title: 'C', at: 'C3' }],
+      links: [{ from: 'a', to: 'c' }],
+    }
     expect(layoutHints(blocked)).toMatch(/^Layout hints[^\n]*\nwarning \/blocks: Arrow "a" → "c" has block "b" in its way/)
   })
 })
