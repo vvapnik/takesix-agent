@@ -8,6 +8,20 @@ var LINK_DIRECTIONS = [
 	"both",
 	"none"
 ];
+var LINK_STYLES = [
+	"solid",
+	"dashed",
+	"dotted"
+];
+var BLOCK_SHAPES = [
+	"process",
+	"terminator",
+	"decision",
+	"io",
+	"subprocess",
+	"loop-start",
+	"loop-end"
+];
 // node_modules/@takesix/core/dist/tree-index.js
 /**
 * Builds an id → position lookup for a document. On duplicate ids the first
@@ -30,6 +44,77 @@ function buildIndex(doc) {
 	};
 	walk(doc.blocks, null, []);
 	return index;
+}
+// node_modules/@takesix/core/dist/flow.js
+var isObject$1 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+/** Exits a condition may have: yes/no, or three for less/equal/greater. */
+var MIN_EXITS = 2;
+var MAX_EXITS = 3;
+/** JSON Pointer of a block, from its path of ids. */
+function pointer(path, blocks, index) {
+	let p = "/blocks";
+	let siblings = blocks;
+	path.forEach((id, depth) => {
+		const block = index.get(id).block;
+		if (depth > 0) p += "/children";
+		p += `/${siblings.indexOf(block)}`;
+		siblings = block.children ?? [];
+	});
+	return p;
+}
+/**
+* Warnings for flowchart blocks: a `decision` should have 2–3 exits on its
+* level, each with a `label` ("yes", "no"); a level should have at most one
+* start, a `terminator` nothing leads into.
+*/
+function flowIssues(blocks, links, index) {
+	const issues = [];
+	const edges = links.filter(isObject$1).flatMap((l) => {
+		const from = l.from;
+		const to = l.to;
+		if (typeof from !== "string" || typeof to !== "string" || from === to) return [];
+		const a = index.get(from);
+		const b = index.get(to);
+		if (!a || !b || a.parentId !== b.parentId) return [];
+		return [{
+			from,
+			to,
+			label: typeof l.label === "string" ? l.label.trim() : "",
+			both: l.direction === "both"
+		}];
+	});
+	const starts = /* @__PURE__ */ new Map();
+	for (const [id, entry] of index) {
+		const shape = entry.block.shape;
+		if (shape === "decision") {
+			const exits = edges.filter((e) => e.from === id || e.both && e.to === id);
+			const path = pointer(entry.path, blocks, index);
+			if (exits.length < MIN_EXITS || exits.length > MAX_EXITS) issues.push({
+				severity: "warning",
+				code: "decision-exits",
+				path,
+				message: `Decision "${id}" has ${exits.length} exit${exits.length === 1 ? "" : "s"}: a condition leads to ${MIN_EXITS} or ${MAX_EXITS} blocks on its level, one link each`
+			});
+			if (exits.some((e) => e.label === "")) issues.push({
+				severity: "warning",
+				code: "decision-exit-label",
+				path,
+				message: `Every exit of decision "${id}" needs a "label" saying when it is taken, like "yes" and "no"`
+			});
+		} else if (shape === "terminator") {
+			if (!edges.some((e) => e.to === id || e.both && e.from === id)) starts.set(entry.parentId, [...starts.get(entry.parentId) ?? [], id]);
+		}
+	}
+	for (const [parentId, ids] of starts) {
+		if (ids.length < 2) continue;
+		issues.push({
+			severity: "warning",
+			code: "several-starts",
+			path: parentId === null ? "/blocks" : `${pointer(index.get(parentId).path, blocks, index)}/children`,
+			message: `${ids.length} terminators start this level (${ids.map((i) => `"${i}"`).join(", ")}): a flowchart has one start; link into the others or make them a different shape`
+		});
+	}
+	return issues;
 }
 // node_modules/@takesix/core/dist/grid.js
 var CELL$1 = /^([A-Z])(\d+)$/;
@@ -100,6 +185,7 @@ var BLOCK_FIELDS = [
 	"description",
 	"details",
 	"icon",
+	"shape",
 	"at",
 	"children",
 	"meta"
@@ -111,8 +197,11 @@ var LINK_FIELDS = [
 	"label",
 	"description",
 	"direction",
+	"style",
 	"meta"
 ];
+/** A block opens either into blocks or into text; the ways out, in the order to try them. */
+var DETAILS_WITH_CHILDREN = (id) => `Block "${id}" has both "children" and "details": a block opens either into blocks or into text. Drop text that only introduces the children (the screen header and the cards already do that); put a one-line introduction into "description"; move real content into a child block of its own, named for what it says, with the text in its "details", or into the "details" of the children it is about; or, when the children are small, remove them and fold what they say into this block's "details"`;
 var isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 /**
 * Checks a parsed value against format v1. Works on untrusted input, so it
@@ -192,6 +281,7 @@ function validateDocument(input) {
 			checkString(block, "description", bp, false);
 			checkString(block, "details", bp, false);
 			checkString(block, "icon", bp, false);
+			if (block.shape !== void 0 && !BLOCK_SHAPES.includes(block.shape)) error("invalid-value", `${bp}/shape`, `"shape" must be one of: ${BLOCK_SHAPES.join(", ")}`);
 			const area = checkArea(block, bp);
 			if (area) {
 				const other = placed.find((p) => overlap(p.area, area));
@@ -203,6 +293,7 @@ function validateDocument(input) {
 			}
 			checkMeta(block, bp);
 			checkUnknown(block, BLOCK_FIELDS, bp);
+			if (block.children !== void 0 && block.details !== void 0) error("details-with-children", `${bp}/details`, DETAILS_WITH_CHILDREN(String(block.id)));
 			if (typeof block.id === "string" && block.id !== "") {
 				const first = seenIds.get(block.id);
 				if (first !== void 0) error("duplicate-id", `${bp}/id`, `Id "${block.id}" is already used at ${first}`);
@@ -232,6 +323,7 @@ function validateDocument(input) {
 				checkMeta(link, lp);
 				checkUnknown(link, LINK_FIELDS, lp);
 				if (link.direction !== void 0 && !LINK_DIRECTIONS.includes(link.direction)) error("invalid-value", `${lp}/direction`, `"direction" must be one of: ${LINK_DIRECTIONS.join(", ")}`);
+				if (link.style !== void 0 && !LINK_STYLES.includes(link.style)) error("invalid-value", `${lp}/style`, `"style" must be one of: ${LINK_STYLES.join(", ")}`);
 				if (typeof link.id === "string") {
 					const first = seenLinkIds.get(link.id);
 					if (first !== void 0) error("duplicate-link-id", `${lp}/id`, `Link id "${link.id}" is already used at ${first}`);
@@ -244,8 +336,9 @@ function validateDocument(input) {
 				if (!fromEntry) error("unknown-link-endpoint", `${lp}/from`, `No block with id "${from}"`);
 				if (!toEntry) error("unknown-link-endpoint", `${lp}/to`, `No block with id "${to}"`);
 				if (from === to) error("self-link", lp, `Link connects block "${from}" to itself`);
-				else if (fromEntry && toEntry && (fromEntry.path.includes(to) || toEntry.path.includes(from))) add("warning", "link-never-visible", lp, `Link between "${from}" and "${to}" is never shown: one block contains the other`);
+				else if (fromEntry && toEntry && fromEntry.parentId !== toEntry.parentId) add("warning", "link-never-visible", lp, `Link between "${from}" and "${to}" is never shown: only blocks of one level are linked. Link the blocks that contain them, on the level they share`);
 			});
+			if (Array.isArray(input.blocks)) issues.push(...flowIssues(input.blocks, input.links, index));
 		}
 	}
 	return {
@@ -259,32 +352,21 @@ function formatIssues(issues) {
 }
 // node_modules/@takesix/core/dist/links.js
 /**
-* Projects document links onto the screen of `parentId` (`null` = top level).
-*
-* Each endpoint is replaced by its ancestor on that level, so a link between
-* deeply nested blocks shows up as an arrow between the blocks that contain
-* them. Links whose endpoints land in the same block, or outside this level,
-* are not shown. Several links between the same pair of blocks merge into one
-* arrow.
+* The arrows on the screen of `parentId` (`null` = top level): links between
+* two blocks of that level. Links between blocks of different levels are
+* never drawn. Several links between the same pair of blocks merge into one
+* arrow, opposite one-way links into a two-way arrow.
 */
 function visibleLinks(doc, parentId, index = buildIndex(doc)) {
-	let depth = 0;
-	if (parentId !== null) {
-		const parent = index.get(parentId);
-		if (!parent) return [];
-		depth = parent.depth + 1;
-	}
-	const project = (id) => {
+	if (parentId !== null && !index.has(parentId)) return [];
+	const onLevel = (id) => {
 		const entry = index.get(id);
-		if (!entry) return void 0;
-		if (parentId !== null && entry.path[depth - 1] !== parentId) return void 0;
-		return entry.path[depth];
+		return entry !== void 0 && entry.parentId === parentId;
 	};
 	const groups = /* @__PURE__ */ new Map();
 	for (const link of doc.links ?? []) {
-		const from = project(link.from);
-		const to = project(link.to);
-		if (from === void 0 || to === void 0 || from === to) continue;
+		const { from, to } = link;
+		if (from === to || !onLevel(from) || !onLevel(to)) continue;
 		const [a, b] = from < to ? [from, to] : [to, from];
 		const key = `${a}|${b}`;
 		let g = groups.get(key);
@@ -296,8 +378,7 @@ function visibleLinks(doc, parentId, index = buildIndex(doc)) {
 				links: [],
 				forward: false,
 				backward: false,
-				both: false,
-				direct: true
+				both: false
 			};
 			groups.set(key, g);
 		}
@@ -308,7 +389,6 @@ function visibleLinks(doc, parentId, index = buildIndex(doc)) {
 			if (from === a) g.forward = true;
 			else g.backward = true;
 		}
-		if (link.from !== from || link.to !== to) g.direct = false;
 	}
 	return [...groups.values()].map((g) => {
 		let [from, to] = g.first;
@@ -318,13 +398,15 @@ function visibleLinks(doc, parentId, index = buildIndex(doc)) {
 			direction = "forward";
 			[from, to] = g.forward ? [g.a, g.b] : [g.b, g.a];
 		} else direction = "none";
+		const styles = new Set(g.links.map((l) => l.style ?? "solid"));
+		const style = styles.size === 1 ? [...styles][0] : "solid";
 		return {
 			key: `${from}|${to}`,
 			from,
 			to,
 			direction,
-			links: g.links,
-			direct: g.direct
+			style,
+			links: g.links
 		};
 	});
 }
@@ -403,6 +485,92 @@ function arrowSegment(a, b) {
 		y: rb.bottom
 	}];
 }
+/**
+* The lines an arrow between two areas follows, given the other blocks of the
+* level. Like {@link arrowSegment}, except that a straight arrow with a block
+* in its way goes around it, as the viewer draws it: blocks sharing rows by
+* the gap below them, blocks sharing columns (a loop back up, say) by the gap
+* beside them, on the side that crosses fewer blocks, then the one with fewer
+* blocks beside it, then the shorter one. Viewers keep room beside the outer
+* columns for it.
+*/
+function arrowRoute(a, b, others) {
+	const straight = arrowSegment(a, b);
+	const blocking = others.filter((o) => crossesArea(straight, o));
+	const shareRows = sharedMiddle(a.row, a.height, b.row, b.height) !== void 0;
+	const shareCols = sharedMiddle(a.col, a.width, b.col, b.width) !== void 0;
+	if (!blocking.length || !shareRows && !shareCols) return [straight];
+	const ra = box(a);
+	const rb = box(b);
+	const boxes = [
+		ra,
+		rb,
+		...blocking.map(box)
+	];
+	const via = (p, q, lane, horizontal) => {
+		const p2 = horizontal ? {
+			x: lane.x,
+			y: p.y
+		} : {
+			x: p.x,
+			y: lane.y
+		};
+		const q2 = horizontal ? {
+			x: lane.x,
+			y: q.y
+		} : {
+			x: q.x,
+			y: lane.y
+		};
+		return [
+			[p, p2],
+			[p2, q2],
+			[q2, q]
+		];
+	};
+	if (shareRows) {
+		const lane = Math.max(...boxes.map((r) => r.bottom)) + GAP / 2;
+		return via({
+			x: (ra.left + ra.right) / 2,
+			y: ra.bottom
+		}, {
+			x: (rb.left + rb.right) / 2,
+			y: rb.bottom
+		}, {
+			x: 0,
+			y: lane
+		}, false);
+	}
+	const ay = (ra.top + ra.bottom) / 2;
+	const by = (rb.top + rb.bottom) / 2;
+	const right = via({
+		x: ra.right,
+		y: ay
+	}, {
+		x: rb.right,
+		y: by
+	}, {
+		x: Math.max(...boxes.map((r) => r.right)) + GAP / 2,
+		y: 0
+	}, true);
+	const left = via({
+		x: ra.left,
+		y: ay
+	}, {
+		x: rb.left,
+		y: by
+	}, {
+		x: Math.min(...boxes.map((r) => r.left)) - GAP / 2,
+		y: 0
+	}, true);
+	const crossed = (route) => others.filter((o) => route.some((s) => crossesArea(s, o))).length;
+	const length = (route) => route.reduce((n, [p, q]) => n + Math.abs(q.x - p.x) + Math.abs(q.y - p.y), 0);
+	const top = Math.min(...boxes.map((r) => r.top));
+	const bottom = Math.max(...boxes.map((r) => r.bottom));
+	const beside = (side) => others.map(box).filter((o) => o.top < bottom && o.bottom > top && (side === "right" ? o.left >= Math.max(...boxes.map((r) => r.right)) : o.right <= Math.min(...boxes.map((r) => r.left)))).length;
+	const score = (route, side) => crossed(route) * 1e3 + beside(side) * 100 + length(route);
+	return score(left, "left") < score(right, "right") ? left : right;
+}
 /** Whether a segment passes through the inside of an area (touching an edge does not count). */
 function crossesArea([p, q], area) {
 	const e = .01;
@@ -444,23 +612,25 @@ function segmentsCross([a, b], [c, d]) {
 }
 /**
 * Layout problems of the screen of `parentId` (`null` = top level): arrows
-* that run through a third block and arrows that cross each other, including
-* arrows merged from nested links. Editors show them next to the arrows.
+* that run through a third block (after going around the blocks in the way
+* of a straight arrow, see {@link arrowRoute}) and arrows that cross each
+* other. Editors show them next to the arrows.
 */
 function levelLayoutIssues(doc, parentId, index = buildIndex(doc)) {
 	const areas = levelAreas(getLevel(doc, parentId, index));
 	const arrows = visibleLinks(doc, parentId, index).flatMap((link) => {
 		const a = areas.get(link.from);
 		const b = areas.get(link.to);
-		return a && b ? [{
+		if (!a || !b) return [];
+		return [{
 			link,
-			segment: arrowSegment(a, b)
-		}] : [];
+			route: arrowRoute(a, b, [...areas].filter(([id]) => id !== link.from && id !== link.to).map(([, area]) => area))
+		}];
 	});
 	const name = (link) => `"${link.from}" → "${link.to}"`;
 	const issues = [];
-	for (const { link, segment } of arrows) for (const [id, area] of areas) {
-		if (id === link.from || id === link.to || !crossesArea(segment, area)) continue;
+	for (const { link, route } of arrows) for (const [id, area] of areas) {
+		if (id === link.from || id === link.to || !route.some((s) => crossesArea(s, area))) continue;
 		issues.push({
 			code: "arrow-crosses-block",
 			message: `Arrow ${name(link)} has block "${id}" in its way: place the two blocks next to each other`,
@@ -470,7 +640,7 @@ function levelLayoutIssues(doc, parentId, index = buildIndex(doc)) {
 	}
 	arrows.forEach((first, i) => {
 		for (const second of arrows.slice(i + 1)) {
-			if ([first.link.from, first.link.to].some((id) => id === second.link.from || id === second.link.to) || !segmentsCross(first.segment, second.segment)) continue;
+			if ([first.link.from, first.link.to].some((id) => id === second.link.from || id === second.link.to) || !first.route.some((s) => second.route.some((t) => segmentsCross(s, t)))) continue;
 			issues.push({
 				code: "arrows-cross",
 				message: `Arrows ${name(first.link)} and ${name(second.link)} cross`,
@@ -579,7 +749,7 @@ function textHints(doc) {
 				if (block.title.length > titleFits) out.push(`warning ${path}/${i}/title: Title of "${block.id}" (${size}) has ${block.title.length} characters, about ${titleFits} fit; shorten it or widen the block`);
 				const descriptionFits = DESCRIPTION_CHARS[a.width - 1] * descriptionLines(a.width, a.height);
 				const length = block.description?.length ?? 0;
-				if (length > descriptionFits) out.push(`warning ${path}/${i}/description: Description of "${block.id}" (${size}) has ${length} characters, about ${descriptionFits} fit and the rest ends in "…"; shorten it, move the rest to details, or widen the block`);
+				if (length > descriptionFits) out.push(`warning ${path}/${i}/description: Description of "${block.id}" (${size}) has ${length} characters, about ${descriptionFits} fit and the rest ends in "…"; shorten it${block.children ? "" : ", move the rest to details"} or widen the block`);
 			}
 			if (block.children?.length) level(block.children, `${path}/${i}/children`);
 		});
@@ -607,10 +777,30 @@ function sketch(doc) {
 	level(doc.blocks, doc.title, 0);
 	return out.join("\n") + "\n";
 }
+var n = `<div class="takesix-preloader" role="status" aria-label="Loading the diagram"><style>
+.takesix-preloader{box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+height:100%;min-height:240px;background:#f0f2f5;color:#8fa3b8;font:500 0.8rem/1.4 system-ui,-apple-system,sans-serif;
+opacity:0;animation:takesix-preloader-in .3s ease-out .4s forwards}
+.takesix-preloader svg{animation:takesix-preloader-breathe 1.6s ease-in-out .4s infinite}
+.takesix-preloader[data-error]{opacity:1;animation:none;padding:24px;text-align:center}
+.takesix-preloader[data-error] svg{animation:none}
+.takesix-preloader p{margin:0;max-width:60ch;color:#c2410c;white-space:pre-wrap}
+@keyframes takesix-preloader-in{to{opacity:1}}
+@keyframes takesix-preloader-breathe{50%{opacity:.45}}
+@media (prefers-color-scheme:dark){.takesix-preloader{background:#0f141b;color:#7d8ca0}.takesix-preloader p{color:#fb923c}}
+@media (prefers-reduced-motion:reduce){.takesix-preloader svg{animation:none}}
+</style><svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.5 2 35 35" width="56" height="56" fill="currentColor" aria-hidden="true">
+<rect x="3.6" y="9" width="3.6" height="12" rx="1.8"/><rect x="7.9" y="5" width="3.6" height="16" rx="1.8"/>
+<rect x="12.2" y="3" width="3.6" height="18" rx="1.8"/><rect x="16.5" y="4" width="3.6" height="17" rx="1.8"/>
+<rect x="20.8" y="7" width="3.6" height="14" rx="1.8"/>
+<path d="M3.6 18.6L7.55 17.6L11.85 15.4L16.15 14.6L20.45 15.3L24.4 16.6V29.5C24.4 33.3 21.4 36 17.6 36H10.6C6.7 36 3.6 33 3.6 29.1Z"/>
+<line x1="21.5" y1="31" x2="28.4" y2="19.6" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+</svg></div>`;
 // src/render.ts
 var escapeHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 /**
 * One self-contained HTML page: the document as JSON plus the inlined viewer.
+* Until the viewer renders, a loading screen without script shows instead.
 * `<` in the JSON is escaped, so no text in the document can close the
 * <script> element and inject markup.
 */
@@ -627,7 +817,7 @@ function renderHtml(doc, viewerJs, viewerCss) {
 <style>${viewerCss}</style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">${n}</div>
 <script type="application/json" id="takesix-data">${json}<\/script>
 <script>${viewerJs}<\/script>
 </body>
@@ -641,8 +831,8 @@ function summarize(doc) {
 	const depth = Math.max(0, ...[...index.values()].map((e) => e.depth + 1));
 	const links = doc.links?.length ?? 0;
 	const top = visibleLinks(doc, null, index);
-	const merged = top.filter((l) => !l.direct).length;
-	return `${index.size} blocks on ${depth} level${depth === 1 ? "" : "s"}, ${links} link${links === 1 ? "" : "s"}; top level shows ${top.length} arrow${top.length === 1 ? "" : "s"}` + (merged ? ` (${merged} merged from nested links: check they are wanted there)` : "");
+	const across = (doc.links ?? []).filter((l) => index.get(l.from)?.parentId !== index.get(l.to)?.parentId).length;
+	return `${index.size} blocks on ${depth} level${depth === 1 ? "" : "s"}, ${links} link${links === 1 ? "" : "s"}; top level shows ${top.length} arrow${top.length === 1 ? "" : "s"}` + (across ? `; ${across} link${across === 1 ? "" : "s"} between levels not drawn: link the blocks that contain them` : "");
 }
 // src/cli.ts
 var USAGE = `Usage:
