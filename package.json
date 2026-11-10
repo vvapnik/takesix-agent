@@ -1,6 +1,6 @@
 {
   "name": "@takesix/mcp",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "MCP server that lets AI agents answer with a TakeSix diagram instead of a wall of text: guide, validation and a viewer in the conversation",
   "type": "module",
   "bin": {
