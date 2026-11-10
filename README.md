@@ -1,5 +1,10 @@
 # takesix-agent
 
+> TakeSix is an open format and libraries that let an AI agent answer with a diagram you can click into instead of a wall of text: at most six blocks per screen, and any block opens into up to six more.
+> **[takesix.vapnik.de](https://takesix.vapnik.de/)** · [FAQ](https://takesix.vapnik.de/faq/)
+
+![TakeSix: answers as diagrams, not walls of text. Six blocks of a checkout diagram with arrows.](https://takesix.vapnik.de/og.png)
+
 Lets AI agents answer with a [takesix](https://github.com/vvapnik/takesix-core)
 diagram instead of a long wall of text: the gist on one screen, at most six
 blocks, and the depth one click away.
@@ -13,6 +18,18 @@ This repository holds:
   MCP client. In apps that support [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview)
   the diagram opens right in the conversation.
 - **`src/`** — the sources of the bundled script, the viewer and the server.
+
+## Claude Code plugin
+
+The skill and the MCP server in one step:
+
+```
+/plugin install takesix --marketplace vvapnik/takesix-agent
+```
+
+On Claude Code before 2.1.275, add the marketplace first:
+`/plugin marketplace add vvapnik/takesix-agent`, then `/plugin install takesix@takesix`.
+The manifests are in `.claude-plugin/`.
 
 ## MCP server
 
@@ -53,6 +70,11 @@ Where the diagram shows up:
 
 The server runs locally over stdio: no hosting, nothing leaves the machine.
 
+For the official [MCP Registry](https://registry.modelcontextprotocol.io/) the
+server is described as `io.github.vvapnik/takesix` (`server.json`, `mcpName` in
+`package.json`). `publish.yml` publishes it there on stable releases from 1.0.0
+on.
+
 ## Install the skill
 
 Copy (or symlink) `skill/takesix` into your skills folder, for example for
@@ -83,6 +105,11 @@ node skill/takesix/scripts/takesix.mjs render answer.takesix.json -o answer.html
 - `render` validates, then writes **one self-contained HTML file**: the
   document and the viewer (React and `@takesix/react`) are inlined, so it opens
   from disk, without a network, and works as an artifact.
+
+The HTML files from `render` and `show` carry a small "Made with TakeSix" link
+in the bottom right corner. To leave it out: `render --no-credit`,
+`credit: false` in `show`, or `TAKESIX_NO_CREDIT=1` in the environment (for
+the MCP server: in the `env` of its configuration).
 
 ## Development
 
