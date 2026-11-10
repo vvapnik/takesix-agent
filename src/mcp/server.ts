@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { standaloneHtml } from '@takesix/react/standalone'
 import { layoutHints } from '../layout.js'
 import { summarize } from '../summary.js'
+import { creditFromEnv, withCredit } from '../credit.js'
 import { BLUEPRINT_TYPES, blueprintText, guideText, type BlueprintType } from './guide.js'
 import { DOCUMENT_META_KEY, VIEW_URI } from './shared.js'
 
@@ -123,6 +124,8 @@ export function createServer(assets: Assets): McpServer {
       ...source,
       output: z.string().optional()
         .describe('Where to write the HTML file. Default: next to `file`, or in a takesix folder in the temp directory'),
+      credit: z.boolean().optional()
+        .describe('Show a small "Made with TakeSix" link in the corner of the HTML file. Default: true; set false when the user asks to leave it out'),
     },
     _meta: { ui: { resourceUri: VIEW_URI } },
   }, async args => {
@@ -132,7 +135,7 @@ export function createServer(assets: Assets): McpServer {
     const out = htmlPath(doc, loaded.file, args.output)
     try {
       mkdirSync(dirname(out), { recursive: true })
-      writeFileSync(out, standaloneHtml(doc))
+      writeFileSync(out, withCredit(standaloneHtml(doc), (args.credit ?? true) && creditFromEnv()))
     } catch (e) {
       return fail(`Cannot write ${out}: ${(e as Error).message}`).error
     }

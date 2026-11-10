@@ -4,11 +4,14 @@ import { formatIssues, parseDocument } from '@takesix/core'
 import { layoutHints, sketch } from './layout.js'
 import { standaloneHtml } from '@takesix/react/standalone'
 import { summarize } from './summary.js'
+import { creditFromEnv, withCredit } from './credit.js'
 
 const USAGE = `Usage:
   takesix validate <file.json>              check a document, list problems with paths
   takesix sketch <file.json>                print every level's 6×6 grid as text
-  takesix render <file.json> [-o out.html]  validate, then write one self-contained HTML page`
+  takesix render <file.json> [-o out.html] [--no-credit]
+                                            validate, then write one self-contained HTML page
+                                            (--no-credit: without the small "Made with TakeSix" link)`
 
 function load(file: string) {
   let text: string
@@ -44,6 +47,6 @@ if (command === 'validate') {
 } else {
   const o = rest.indexOf('-o')
   const out = resolve(o >= 0 && rest[o + 1] ? rest[o + 1]! : join(dirname(file), basename(file).replace(/(\.takesix)?\.json$/, '') + '.html'))
-  writeFileSync(out, standaloneHtml(doc))
+  writeFileSync(out, withCredit(standaloneHtml(doc), !rest.includes('--no-credit') && creditFromEnv()))
   console.log(`OK: ${summarize(doc)}\nWrote ${out}`)
 }

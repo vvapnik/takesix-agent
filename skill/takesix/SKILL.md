@@ -49,7 +49,9 @@ HTML file that opens anywhere.
    ```bash
    node <this-skill-dir>/scripts/takesix.mjs render <topic>.takesix.json -o <topic>.html
    ```
-   The page has the viewer inlined: no network, no install. Hand the user this
+   The page has the viewer inlined: no network, no install. It has a small
+   "Made with TakeSix" link in the corner; add `--no-credit` if the user asks
+   to leave it out. Hand the user this
    file itself, so they can open and share it, not only its path:
    - **In a sandbox with an outputs folder** (claude.ai and other chat apps
      with code execution, where `/mnt/user-data/outputs/` exists): render

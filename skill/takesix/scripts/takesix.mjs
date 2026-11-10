@@ -872,11 +872,33 @@ function summarize(doc) {
 	const across = (doc.links ?? []).filter((l) => index.get(l.from)?.parentId !== index.get(l.to)?.parentId).length;
 	return `${index.size} blocks on ${depth} level${depth === 1 ? "" : "s"}, ${links} link${links === 1 ? "" : "s"}; top level shows ${top.length} arrow${top.length === 1 ? "" : "s"}` + (across ? `; ${across} link${across === 1 ? "" : "s"} between levels not drawn: link the blocks that contain them` : "");
 }
+// src/credit.ts
+var CREDIT = `<a class="takesix-credit" href="https://takesix.vapnik.de/?ref=made-with" target="_blank" rel="noopener">Made with TakeSix</a>
+<style>
+.takesix-credit{position:fixed;right:12px;bottom:10px;z-index:1;padding:2px 6px;border-radius:4px;
+font:500 11px/1.4 system-ui,-apple-system,sans-serif;color:#8a97a8;text-decoration:none;opacity:.75}
+.takesix-credit:hover,.takesix-credit:focus-visible{opacity:1;text-decoration:underline}
+@media print{.takesix-credit{display:none}}
+</style>
+`;
+/** True unless TAKESIX_NO_CREDIT is set to something other than 0 or false. */
+function creditFromEnv(env = process.env) {
+	const off = env.TAKESIX_NO_CREDIT;
+	return off === void 0 || off === "" || off === "0" || off.toLowerCase() === "false";
+}
+/** Adds the link before `</body>`; returns the page unchanged when `on` is false. */
+function withCredit(html, on = true) {
+	if (!on) return html;
+	const at = html.lastIndexOf("</body>");
+	return at < 0 ? html + CREDIT : html.slice(0, at) + CREDIT + html.slice(at);
+}
 // src/cli.ts
 var USAGE = `Usage:
   takesix validate <file.json>              check a document, list problems with paths
   takesix sketch <file.json>                print every level's 6×6 grid as text
-  takesix render <file.json> [-o out.html]  validate, then write one self-contained HTML page`;
+  takesix render <file.json> [-o out.html] [--no-credit]
+                                            validate, then write one self-contained HTML page
+                                            (--no-credit: without the small "Made with TakeSix" link)`;
 function load(file) {
 	let text;
 	try {
@@ -911,7 +933,7 @@ else if (command === "sketch") process.stdout.write(sketch(doc));
 else {
 	const o = rest.indexOf("-o");
 	const out = resolve(o >= 0 && rest[o + 1] ? rest[o + 1] : join(dirname(file), basename(file).replace(/(\.takesix)?\.json$/, "") + ".html"));
-	writeFileSync(out, a(doc));
+	writeFileSync(out, withCredit(a(doc), !rest.includes("--no-credit") && creditFromEnv()));
 	console.log(`OK: ${summarize(doc)}\nWrote ${out}`);
 }
 export {};

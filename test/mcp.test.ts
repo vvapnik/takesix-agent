@@ -129,6 +129,15 @@ describe('show', () => {
     const r = await client.callTool({ name: 'show', arguments: { file } })
     expect(text(r)).toContain(`Wrote ${join(dir, 'plan.html')}`)
   })
+
+  it('adds the "Made with TakeSix" link unless asked not to', async () => {
+    const withLink = join(dir, 'credit', 'on.html')
+    const without = join(dir, 'credit', 'off.html')
+    await client.callTool({ name: 'show', arguments: { document: doc, output: withLink } })
+    await client.callTool({ name: 'show', arguments: { document: doc, output: without, credit: false } })
+    expect(readFileSync(withLink, 'utf8')).toMatch(/class="takesix-credit"[^>]*>Made with TakeSix<\/a>[\s\S]*<\/body>/)
+    expect(readFileSync(without, 'utf8')).not.toContain('takesix-credit')
+  })
 })
 
 describe('resources and prompts', () => {
