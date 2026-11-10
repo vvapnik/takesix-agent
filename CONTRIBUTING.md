@@ -57,6 +57,10 @@ history drives versioning and the changelog, so please follow it.
 and `release` for version bumps (`chore(release): 1.2.0`). Leave the scope out
 when a change touches the whole repository.
 
+A version bump changes `package.json`, both versions in `server.json` (MCP
+Registry) and `.claude-plugin/plugin.json`; `test/manifests.test.ts` fails
+when they differ.
+
 CI checks every pushed commit with commitlint (`commitlint.config.js`). To
 check yours before pushing: `npx commitlint --from origin/main`.
 

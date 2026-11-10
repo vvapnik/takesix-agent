@@ -40,3 +40,14 @@ jobs:
       - run: npm ci
       # trusted publishing: npm exchanges the OIDC token, no npm token needed
       - run: npm publish --provenance --access public --tag "$DIST_TAG"
+      # The official MCP Registry (registry.modelcontextprotocol.io) lists the
+      # server from server.json; GitHub OIDC proves the io.github.vvapnik/
+      # namespace. Only for stable versions from 1.0.0 on: no catalog listings
+      # before 1.0.0 (TASK-78 on the Lab board). A failure does not undo npm.
+      - name: Publish to the MCP Registry
+        if: env.DIST_TAG == 'latest' && !startsWith(github.ref_name, 'v0.')
+        continue-on-error: true
+        run: |
+          curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

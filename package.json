@@ -1,7 +1,9 @@
 {
   "name": "@takesix/mcp",
   "version": "0.8.0",
-  "description": "MCP server that lets AI agents answer with a TakeSix diagram instead of a wall of text: guide, validation and a viewer in the conversation",
+  "description": "MCP server and Agent Skill for TakeSix. TakeSix is an open format and libraries that let an AI agent answer with a diagram you can click into instead of a wall of text: at most six blocks per screen, and any block opens into up to six more.",
+  "homepage": "https://takesix.vapnik.de/",
+  "mcpName": "io.github.vvapnik/takesix",
   "type": "module",
   "bin": {
     "takesix-mcp": "dist/mcp.js"
@@ -18,17 +20,29 @@
     "test": "vitest run"
   },
   "keywords": [
-    "mcp",
-    "mcp-app",
-    "diagram",
     "takesix",
+    "mcp",
+    "mcp-server",
+    "mcp-app",
+    "model-context-protocol",
+    "agent-skill",
+    "diagram",
+    "visualization",
+    "nested",
+    "zoomable",
     "ai",
     "agent",
-    "claude"
+    "claude",
+    "claude-code",
+    "codex",
+    "cursor"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vvapnik/takesix-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vvapnik/takesix-agent/issues"
   },
   "license": "MIT",
   "engines": {

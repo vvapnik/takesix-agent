@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.vvapnik/takesix",
+  "title": "TakeSix",
+  "description": "Lets an AI agent answer with a diagram you can click into, at most six blocks per screen.",
+  "websiteUrl": "https://takesix.vapnik.de/",
+  "repository": {
+    "url": "https://github.com/vvapnik/takesix-agent",
+    "source": "github"
+  },
+  "version": "0.8.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@takesix/mcp",
+      "version": "0.8.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

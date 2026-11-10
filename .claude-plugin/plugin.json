@@ -1,0 +1,33 @@
+{
+  "name": "takesix",
+  "displayName": "TakeSix",
+  "version": "0.8.0",
+  "description": "TakeSix is an open format and libraries that let an AI agent answer with a diagram you can click into instead of a wall of text: at most six blocks per screen, and any block opens into up to six more. Installs the Agent Skill and the MCP server.",
+  "author": {
+    "name": "vvapnik",
+    "url": "https://github.com/vvapnik"
+  },
+  "homepage": "https://takesix.vapnik.de/",
+  "repository": "https://github.com/vvapnik/takesix-agent",
+  "license": "MIT",
+  "keywords": [
+    "diagram",
+    "visualization",
+    "mcp",
+    "skill",
+    "architecture",
+    "overview"
+  ],
+  "skills": [
+    "./skill/takesix"
+  ],
+  "mcpServers": {
+    "takesix": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@takesix/mcp"
+      ]
+    }
+  }
+}

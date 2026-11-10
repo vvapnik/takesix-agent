@@ -1,0 +1,14 @@
+{
+  "name": "takesix",
+  "owner": { "name": "vvapnik", "url": "https://github.com/vvapnik" },
+  "metadata": {
+    "description": "TakeSix: AI agents answer with a diagram you can click into instead of a wall of text."
+  },
+  "plugins": [
+    {
+      "name": "takesix",
+      "source": "./",
+      "description": "Agent Skill and MCP server: answers as diagrams with at most six blocks per screen."
+    }
+  ]
+}
