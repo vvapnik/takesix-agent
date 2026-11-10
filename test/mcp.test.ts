@@ -40,7 +40,7 @@ beforeAll(async () => {
       basic: '# Blueprint: basic', architecture: '# Blueprint: architecture', plan: '# Blueprint: plan',
       flowchart: '# Blueprint: flowchart', epic: '{ "takesix": "1.0" }',
     },
-    viewerJs: 'VIEWER_JS', viewerCss: 'VIEWER_CSS', appJs: 'APP_JS', appCss: 'APP_CSS',
+    appJs: 'APP_JS', appCss: 'APP_CSS',
   })
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair()
   client = new Client({ name: 'test', version: '0.0.0' })
@@ -117,7 +117,7 @@ describe('show', () => {
     const output = join(dir, 'out', 'shop.html')
     const r = await client.callTool({ name: 'show', arguments: { document: doc, output } })
     expect(text(r)).toContain(`Wrote ${output}`)
-    expect(readFileSync(output, 'utf8')).toContain('<script>VIEWER_JS</script>')
+    expect(readFileSync(output, 'utf8')).toContain('id="takesix-data"')
     expect(r._meta?.[DOCUMENT_META_KEY]).toEqual(doc)
     // what the model may see stays small
     expect(r.structuredContent).toEqual({ summary: expect.any(String), html: output })

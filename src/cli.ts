@@ -1,18 +1,14 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { formatIssues, parseDocument } from '@takesix/core'
 import { layoutHints, sketch } from './layout.js'
-import { renderHtml } from './render.js'
+import { standaloneHtml } from '@takesix/react/standalone'
 import { summarize } from './summary.js'
 
 const USAGE = `Usage:
   takesix validate <file.json>              check a document, list problems with paths
   takesix sketch <file.json>                print every level's 6×6 grid as text
   takesix render <file.json> [-o out.html]  validate, then write one self-contained HTML page`
-
-// The bundled script lives in <skill>/scripts; the viewer in <skill>/assets.
-const assets = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets')
 
 function load(file: string) {
   let text: string
@@ -48,7 +44,6 @@ if (command === 'validate') {
 } else {
   const o = rest.indexOf('-o')
   const out = resolve(o >= 0 && rest[o + 1] ? rest[o + 1]! : join(dirname(file), basename(file).replace(/(\.takesix)?\.json$/, '') + '.html'))
-  const html = renderHtml(doc, readFileSync(join(assets, 'viewer.js'), 'utf8'), readFileSync(join(assets, 'viewer.css'), 'utf8'))
-  writeFileSync(out, html)
+  writeFileSync(out, standaloneHtml(doc))
   console.log(`OK: ${summarize(doc)}\nWrote ${out}`)
 }

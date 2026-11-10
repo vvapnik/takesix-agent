@@ -7,7 +7,7 @@ import { RESOURCE_MIME_TYPE, registerAppResource, registerAppTool } from '@model
 import { formatIssues, parseDocument, type TakeSixDocument } from '@takesix/core'
 import { PRELOADER_HTML } from '@takesix/react/preloader'
 import { z } from 'zod'
-import { renderHtml } from '../render.js'
+import { standaloneHtml } from '@takesix/react/standalone'
 import { layoutHints } from '../layout.js'
 import { summarize } from '../summary.js'
 import { BLUEPRINT_TYPES, blueprintText, guideText, type BlueprintType } from './guide.js'
@@ -21,10 +21,7 @@ export interface Assets {
   blueprints: Record<BlueprintType, string>
   formatMd: string
   schemaJson: string
-  /** Viewer for the HTML files `show` writes. */
-  viewerJs: string
-  viewerCss: string
-  /** Viewer for the MCP App: the same viewer, fed by the host. */
+  /** Viewer for the MCP App, fed by the host. The HTML files `show` writes come from @takesix/react/standalone. */
   appJs: string
   appCss: string
 }
@@ -135,7 +132,7 @@ export function createServer(assets: Assets): McpServer {
     const out = htmlPath(doc, loaded.file, args.output)
     try {
       mkdirSync(dirname(out), { recursive: true })
-      writeFileSync(out, renderHtml(doc, assets.viewerJs, assets.viewerCss))
+      writeFileSync(out, standaloneHtml(doc))
     } catch (e) {
       return fail(`Cannot write ${out}: ${(e as Error).message}`).error
     }

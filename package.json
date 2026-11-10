@@ -9,11 +9,10 @@
   "files": [
     "dist",
     "skill/takesix/SKILL.md",
-    "skill/takesix/references",
-    "skill/takesix/assets"
+    "skill/takesix/references"
   ],
   "scripts": {
-    "build": "vite build --config vite.viewer.config.ts && vite build --config vite.cli.config.ts && vite build --config vite.app.config.ts && vite build --config vite.mcp.config.ts",
+    "build": "vite build --config vite.cli.config.ts && vite build --config vite.app.config.ts && vite build --config vite.mcp.config.ts",
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

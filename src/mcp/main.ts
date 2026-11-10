@@ -18,8 +18,6 @@ const server = createServer({
     [type, read('skill', 'takesix', 'references', 'blueprints', type === 'epic' ? 'epic.takesix.json' : `${type}.md`)])) as Record<BlueprintType, string>,
   formatMd: read('skill', 'takesix', 'references', 'format.md'),
   schemaJson: readFileSync(require.resolve('@takesix/core/schema.json'), 'utf8'),
-  viewerJs: read('skill', 'takesix', 'assets', 'viewer.js'),
-  viewerCss: read('skill', 'takesix', 'assets', 'viewer.css'),
   appJs: read('dist', 'app', 'app.js'),
   appCss: read('dist', 'app', 'app.css'),
 })

@@ -15,9 +15,9 @@ npm run build   # skill script and viewer, MCP view, MCP server
 npm test
 ```
 
-The skill's built files (`skill/takesix/scripts`, `skill/takesix/assets`) are
-committed, so the skill folder works on its own: commit them after a build. CI
-fails when they are out of date.
+The skill's built script (`skill/takesix/scripts/takesix.mjs`, with the viewer
+from `@takesix/react/standalone` inside) is committed, so the skill folder works
+on its own: commit it after a build. CI fails when it is out of date.
 
 ## Commit messages
 
