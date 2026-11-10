@@ -95,7 +95,8 @@ HTML file that opens anywhere.
 
 - **Document:** `takesix: "1.0"`, `title`, `description`, `blocks` (≤6), `links`.
 - **Block:** `id` (unique in the whole document), `at`, `title`,
-  `description`, and optionally `icon` (one emoji or character), `shape` (a
+  `description`, and optionally `icon` (one emoji or character, or an
+  inline SVG drawing, see "Icons" below), `shape` (a
   flowchart symbol: `terminator`, `decision`, `io`, `subprocess`,
   `loop-start`, `loop-end`; a plain card by default), and either `children`
   (≤6) or `details` (Markdown text) — never both.
@@ -172,19 +173,46 @@ the reader sees, so keep the viewer in mind while writing.
   opened screen shows the block's whole description in its header.
 - **Text must fit the block's size.** A card never shrinks its text: a
   description longer than the card holds is cut off with "…", and a long
-  title pushes the description out. Budget per block width (characters, measured on a
-  MacBook Pro 13", Cyrillic slightly less than Latin):
+  title pushes the description out. The budget is set by the narrowest place
+  a diagram is shown: **embedded in a chat column, about 720px wide**, where
+  the grid's cells are square. A laptop screen stretches the grid (up to
+  2:1) and shows more, so text that fits the chat fits everywhere.
+
+  What each width shows (characters on one line, with an icon beside the
+  text, Cyrillic; Latin fits about 5% more):
 
   | Width (columns) | 1 | 2 | 3 | 4 | 5 | 6 |
   |---|---|---|---|---|---|---|
-  | Title | 15 | 40 | 65 | 85 | 110 | 130 |
-  | Description, one-row block | 19 | 50 | 85 | 110 | 140 | 330 |
+  | Shows | icon only | short title | title + description | ← | ← | ← |
+  | Title, chars per line | — | 12 | 23 | 35 | 47 | 44 |
+  | Description, chars per line | — | 15 | 30 | 45 | 57 | 57 |
 
-  A one-row block holds one line of description (two at full width); every
-  extra row adds about six lines, and the title may then take two lines. A
-  one-column block fits a title of one or two short words and a few words of
-  description — if the block needs more, make it wider, not the text smaller.
-  `validate` warns about every title and description over its budget.
+  1. **One column: an icon, no text.** The card shows only its icon, large
+     and centred; the title becomes a tooltip and the description is not
+     shown. **Prefer it whenever the icon alone names the thing beyond
+     doubt**: a reader who sees only the picture would say its title without
+     hovering (🔒 for a lock, a phone, a database cylinder, a pump; ✅ ⏳ for
+     a status). If the reader would have to guess (🎭 for smoke tests, 🔁
+     for CI, 🐤 for a canary), give it two columns and a title instead.
+     Always set an icon, and still name the thing in the parent's
+     description or a link label.
+  2. **Two columns: a short title**, one or two words (up to 12 characters
+     on a line). Its description shows one line of about 15 characters:
+     keep it to a few words or leave it out.
+  3. **Three columns and wider: title and description** to the budget above.
+
+  Lines by height (rows): a one-row card shows the title on one line and one
+  line of description. Every extra row adds about five lines of description,
+  and the title may then take two lines:
+
+  | Height (rows) | 1 | 2 | 3 | 4 | 5 | 6 |
+  |---|---|---|---|---|---|---|
+  | Description lines | 1 | 6 | 11 | 16 | 21 | 26 |
+
+  So a 3×1 card holds about 30 characters of description, a 3×2 card about
+  180. If a block needs more, make it bigger or move text to `details`, not
+  the text smaller. `validate` warns about every title and description over
+  its budget, and about a one-column block without an icon.
 - `description` is one short line. Anything longer — explanations, code,
   lists, caveats — goes into `details`: the block then opens into that text,
   on a screen of its own, instead of into blocks. It is a small Markdown subset:
@@ -211,30 +239,28 @@ the reader sees, so keep the viewer in mind while writing.
 
 **Layout: use the whole grid, and space is a tool**
 
-The grid always fills the screen: six equal columns, six equal rows. Empty
-cells stay empty on screen, so where you leave space is as visible as where
+The grid keeps its proportions: square cells when embedded in a chat, up to
+twice as wide as tall on a large screen. Empty cells stay empty on screen, so where you leave space is as visible as where
 you put a block. Each blueprint gives the shapes for its kind of diagram;
 these rules hold for all of them.
 - **Balance the screen.** Place the blocks as one composition: do not pack
   them into the top-left corner or leave half the screen empty, and do not
   try to fill every cell.
-- **Keep blocks small, but at least two columns wide.** A block of two cells
-  side by side (`"A1:B1"`) is the norm: it fits a real title and a line of
-  description. Give more only to the block the level is about (a tall or wide
-  block draws the eye first), or when its text needs it (see the budget
-  above). A block much bigger than its text reads as an empty box.
-- **One-column blocks only when the shape needs them**, with text to the
-  one-column budget; otherwise two blocks per row, two columns each, read
-  better than three cramped ones.
+- **Size a block by what it has to say** (see the widths above): one column
+  for an icon, two for a name, three or more for a name and a sentence.
+  Give more only to the block the level is about (a tall or wide block draws
+  the eye first), or when its text needs it. A block much bigger than its
+  text reads as an empty box.
 - **Put an empty cell between blocks linked by an arrow.** With a free column
   between them a horizontal arrow has room to read and room for its label; the
   same goes for a free row between blocks linked from top to bottom. Blocks
-  that touch get a stub of an arrow and no label.
+  that touch get a stub of an arrow and no label, and `validate` warns about
+  them. A chain that does not fit one row with gaps (six one-column steps
+  need eleven columns) wraps onto the next row with an empty row between,
+  or splits into two groups.
 - **Distance says how things relate.** Blocks that belong together sit close;
   separate groups get an empty column or row between them. Use it instead of
   extra boxes or links.
-- On phones the viewer drops empty columns and rows on its own, so gaps cost
-  nothing there.
 
 **Arrows on the grid**
 - Arrows run straight between blocks that share a row or a column, and as a
@@ -278,6 +304,18 @@ these rules hold for all of them.
   overflow onto the cards, or move the blocks apart.
 - `style: "dashed"` sets apart an optional or exceptional path; keep the main
   path solid.
+
+**Icons**
+- `icon` is an emoji, a single character, or an inline SVG drawing:
+  `"<svg viewBox='0 0 24 24'>…</svg>"` (one `<svg>` element; `xmlns` may
+  be left out). Draw what no emoji says: a part of the system, a chart
+  trend, a device, a status. The viewer shows it as an image, so scripts,
+  links and external files do nothing.
+- Keep SVGs small and simple: a 24×24 `viewBox`, a few shapes, strokes
+  about 2 wide, and no text inside (it is too small to read). Use colours
+  that read on light and dark backgrounds (mid tones such as `#3d6aff`,
+  `#e5484d`, `#30a46c`, `#f5a524`, `#8e8e93`); not black or white.
+- On a one-column block the icon is the whole card, so make it count.
 
 **Structure**
 - Six is a hard limit (the validator rejects seven). When you have more, group

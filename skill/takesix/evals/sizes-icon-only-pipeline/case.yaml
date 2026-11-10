@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: sizes-icon-only-pipeline
+expected_outcome: |
+  A compact takesix diagram of a CI/CD pipeline where small, self-explanatory steps are one-column
+  blocks that show only an icon (an emoji or an inline SVG), the bigger parts get text within the
+  width budget, and the steps are named in a parent description or link labels; valid and rendered to HTML.

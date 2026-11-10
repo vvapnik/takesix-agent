@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TakeSixDocument } from '@takesix/core'
-import { layoutHints, sketch, textHints } from '../src/layout.js'
+import { gapHints, layoutHints, sketch, textHints } from '../src/layout.js'
 import { summarize } from '../src/summary.js'
 
 const doc: TakeSixDocument = {
@@ -27,7 +27,10 @@ describe('summarize', () => {
 
 describe('layoutHints', () => {
   it('is empty for a clean layout', () => {
-    const blocks = doc.blocks.map(({ description: _, ...block }) => block)
+    // One-column blocks show only their icon: give them one
+    const withIcons = (blocks: TakeSixDocument['blocks']): TakeSixDocument['blocks'] =>
+      blocks.map(({ description: _, ...block }) => ({ ...block, icon: '●', ...(block.children ? { children: withIcons(block.children) } : {}) }))
+    const blocks = withIcons(doc.blocks)
     expect(layoutHints({ ...doc, blocks, links: [{ from: 'a', to: 'b' }] })).toBe('')
   })
 
@@ -48,15 +51,21 @@ describe('textHints', () => {
   })
 
   it('is empty when the text fits the card', () => {
-    expect(textHints(card('A1', 'Short title', 'Fits on one line'))).toEqual([])
-    expect(textHints(card('A1:A2', 'Two-line title fits', 'A'.repeat(130)))).toEqual([])
+    expect(textHints(card('A1:B1', 'Short title', 'Fits one line'))).toEqual([])
+    expect(textHints(card('A1:B2', 'Two-line title', 'A'.repeat(90)))).toEqual([])
   })
 
   it('flags a title or description longer than the card shows', () => {
-    expect(textHints(card('A1', 'A title far too long', 'Fits'))).toEqual([
-      'warning /blocks/0/title: Title of "x" (1×1) has 20 characters, about 15 fit; shorten it or widen the block',
+    expect(textHints(card('A1:B1', 'A title far too long', 'Fits'))).toEqual([
+      'warning /blocks/0/title: Title of "x" (2×1) has 20 characters, about 12 fit; shorten it or widen the block',
     ])
-    expect(textHints(card('A1:B1', 'Title', 'A'.repeat(51)))[0]).toMatch(/^warning \/blocks\/0\/description: Description of "x" \(2×1\) has 51 characters, about 50 fit/)
+    expect(textHints(card('A1:B1', 'Title', 'A'.repeat(16)))[0]).toMatch(/^warning \/blocks\/0\/description: Description of "x" \(2×1\) has 16 characters, about 15 fit/)
+  })
+
+  it('asks a one-column block for an icon instead of text', () => {
+    expect(textHints(card('A1', 'Title', 'Long description of the block'))).toEqual([
+      'warning /blocks/0/icon: "x" is one column wide and shows only its icon, but has none; give it an icon (an emoji or an SVG) or widen the block',
+    ])
   })
 })
 
@@ -69,5 +78,25 @@ describe('sketch', () => {
     expect(lines[3]).toBe(' 2  ·         ·         ·         ·         c         c')
     // nested levels follow, indented
     expect(lines).toContain('   2  ·         c1        ·         ·         ·         ·')
+  })
+})
+
+describe('gapHints', () => {
+  const pair = (a: string, b: string): TakeSixDocument => ({
+    takesix: '1.0', title: 'T',
+    blocks: [{ id: 'a', title: 'A', at: a }, { id: 'b', title: 'B', at: b }],
+    links: [{ from: 'a', to: 'b' }],
+  })
+
+  it('flags linked blocks that touch', () => {
+    expect(gapHints(pair('A1:B1', 'C1:D1'))).toEqual([
+      'warning /links/0: Arrow "a" → "b" joins blocks that touch; leave a free column between them so the arrow has room',
+    ])
+    expect(gapHints(pair('A1:B1', 'A2:B2'))[0]).toMatch(/free row/)
+  })
+
+  it('is empty with a free cell between', () => {
+    expect(gapHints(pair('A1:B1', 'D1:E1'))).toEqual([])
+    expect(gapHints(pair('A1:B1', 'A3:B3'))).toEqual([])
   })
 })

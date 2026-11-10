@@ -12,8 +12,10 @@ screen should look composed, not packed into a corner:
 
 - about as much free space to the left as to the right, above as below;
 - an empty row between rows of blocks, so the eye separates them;
-- blocks two columns wide and one row tall unless their text needs more
-  (see the text budget in SKILL.md).
+- blocks two columns wide: one row tall for a name alone, two rows (a
+  square: two-line title, about 90 characters of description) when it has
+  a description, as in the 2×2 variants below; see the text budget in
+  SKILL.md.
 
 Places by number of blocks (`·` is an empty cell):
 
@@ -32,6 +34,10 @@ Places by number of blocks (`·` is an empty cell):
 3  ·  ·  ·  ·  ·  ·                  3  ·  ·  ·  ·  ·  ·
 4  ·  d  d  e  e  ·                  4  d  d  e  e  f  f
 ```
+
+With descriptions, make each block two rows tall and keep the empty row:
+4 blocks at `B1:C2`, `D1:E2`, `B4:C5`, `D4:E5`; 6 blocks at `A1:B2`,
+`C1:D2`, `E1:F2`, `A4:B5`, `C4:D5`, `E4:F5`.
 
 Two blocks: `"B3:C3"` and `"D3:E3"`, or one above the other in `B:E`,
 rows 2 and 4. One block alone means the level is not needed: fold it into
