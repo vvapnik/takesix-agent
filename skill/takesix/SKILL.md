@@ -265,12 +265,13 @@ these rules hold for all of them.
   extra boxes or links.
 
 **Arrows on the grid**
-- Arrows run straight between blocks that share a row or a column, and as a
-  smooth curve, side to side, between blocks that share neither. A straight
+- Arrows run straight between blocks that share a row or a column. Between
+  blocks that share neither, an arrow leaves the side of one, turns in the gap
+  beside it and runs level into the other, with rounded corners. A straight
   arrow with a block in its way goes around it: beside the column (the way
   back of a loop) or below the row, on the side without blocks.
-- Arrows should not cross, and a curved arrow must not have a third block in
-  its way. Trace each link on your sketch; `validate` lists both as layout
+- Arrows should not cross or run on top of each other, and a bent arrow must
+  not have a third block in its way. Trace each link on your sketch; `validate` lists both as layout
   hints.
 - Read order is left to right, then top to bottom. Put sources on the left (or
   top) and what they lead to on the right (or below). Only a loop in a
