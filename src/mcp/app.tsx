@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client'
-import { App, type McpUiHostContext } from '@modelcontextprotocol/ext-apps'
+import { McpAppClient, type HostContext as McpUiHostContext } from './client.js'
 import { TakeSix, type MenuOptions } from '@takesix/react'
 import { PRELOADER_HTML, preloaderErrorHtml } from '@takesix/react/preloader'
 import '@takesix/react/style.css'
@@ -19,7 +19,7 @@ interface State {
   context?: McpUiHostContext
 }
 
-const app = new App({ name: 'TakeSix', version: '1.0.0' }, { availableDisplayModes: ['inline', 'fullscreen'] })
+const app = new McpAppClient({ name: 'TakeSix', version: '1.0.0' }, { availableDisplayModes: ['inline', 'fullscreen'] })
 const root = createRoot(document.getElementById('root')!)
 let state: State = {}
 
