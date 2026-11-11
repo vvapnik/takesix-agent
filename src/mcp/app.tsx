@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { McpAppClient, type HostContext as McpUiHostContext } from './client.js'
 import { TakeSix, type MenuOptions } from '@takesix/react'
@@ -5,13 +6,11 @@ import { PRELOADER_HTML, preloaderErrorHtml } from '@takesix/react/preloader'
 import '@takesix/react/style.css'
 import { parseDocument, type TakeSixDocument } from '@takesix/core'
 import { DOCUMENT_META_KEY } from './shared.js'
+import { frameHeight, neededHeight } from './frame.js'
 import './app.css'
 
 // The MCP App view: runs in the host's sandboxed frame and shows the diagram
 // that `show` was called with.
-
-/** Inline height in the conversation, unless the host fixes or caps it. */
-const INLINE_HEIGHT = 560
 
 interface State {
   doc?: TakeSixDocument
@@ -29,14 +28,6 @@ function update(patch: Partial<State>) {
   openFullscreen()
 }
 
-function height(context: McpUiHostContext | undefined): string {
-  if (context?.displayMode === 'fullscreen') return '100vh'
-  const box = context?.containerDimensions
-  if (box && 'height' in box) return `${box.height}px`
-  if (box && 'maxHeight' in box && box.maxHeight) return `${Math.min(box.maxHeight, INLINE_HEIGHT)}px`
-  return `${INLINE_HEIGHT}px`
-}
-
 // The host's sandbox blocks new tabs and downloads: ask the host for both
 const MENU: MenuOptions = {
   openLink: url => void app.openLink({ url }),
@@ -47,8 +38,29 @@ const MENU: MenuOptions = {
 
 function View({ doc, error, context }: State) {
   const theme = context?.theme === 'dark' ? 'dark' : context?.theme === 'light' ? 'light' : 'auto'
+  const frameRef = useRef<HTMLDivElement>(null)
+  // The tallest the diagram has needed so far: the frame only grows, so going
+  // into a block and back does not make the conversation jump
+  const [needed, setNeeded] = useState(0)
+  useLayoutEffect(() => {
+    const frame = frameRef.current
+    if (!frame || !doc) return
+    let pending = 0
+    const measure = () => {
+      cancelAnimationFrame(pending)
+      pending = requestAnimationFrame(() => setNeeded(n => Math.max(n, neededHeight(frame))))
+    }
+    // Cards grow when fonts load and when another level opens
+    const resize = new ResizeObserver(measure)
+    resize.observe(frame)
+    const mutations = new MutationObserver(measure)
+    mutations.observe(frame, { childList: true, subtree: true })
+    void document.fonts?.ready.then(measure)
+    measure()
+    return () => { cancelAnimationFrame(pending); resize.disconnect(); mutations.disconnect() }
+  }, [doc])
   return (
-    <div className="frame" data-theme={theme} style={{ height: height(context) }}>
+    <div ref={frameRef} className="frame" data-theme={theme} style={{ height: frameHeight(context, needed) }}>
       {doc
         ? <TakeSix document={doc} theme={theme} menu={MENU} />
         // The same loading screen the page showed before the script ran, or why there is no diagram
