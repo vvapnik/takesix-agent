@@ -26,6 +26,7 @@ let state: State = {}
 function update(patch: Partial<State>) {
   state = { ...state, ...patch }
   root.render(<View {...state} />)
+  openFullscreen()
 }
 
 function height(context: McpUiHostContext | undefined): string {
@@ -45,8 +46,6 @@ const MENU: MenuOptions = {
 }
 
 function View({ doc, error, context }: State) {
-  const fullscreen = context?.displayMode === 'fullscreen'
-  const canFullscreen = context?.availableDisplayModes?.includes('fullscreen')
   const theme = context?.theme === 'dark' ? 'dark' : context?.theme === 'light' ? 'light' : 'auto'
   return (
     <div className="frame" data-theme={theme} style={{ height: height(context) }}>
@@ -54,17 +53,21 @@ function View({ doc, error, context }: State) {
         ? <TakeSix document={doc} theme={theme} menu={MENU} />
         // The same loading screen the page showed before the script ran, or why there is no diagram
         : <div className="status" dangerouslySetInnerHTML={{ __html: error ? preloaderErrorHtml(error) : PRELOADER_HTML }} />}
-      {doc && canFullscreen && (
-        <button
-          className="mode"
-          onClick={() => app.requestDisplayMode({ mode: fullscreen ? 'inline' : 'fullscreen' })
-            .then(({ mode }) => update({ context: { ...state.context, displayMode: mode } }))}
-        >
-          {fullscreen ? 'Exit full screen' : 'Full screen'}
-        </button>
-      )}
     </div>
   )
+}
+
+// Inline the frame is too small for most diagrams: ask the host for full
+// screen once, as soon as there is a diagram. If the host refuses, stay inline.
+let askedFullscreen = false
+function openFullscreen() {
+  if (askedFullscreen || !state.doc || !state.context) return
+  if (!state.context.availableDisplayModes?.includes('fullscreen')) return
+  askedFullscreen = true
+  if (state.context.displayMode === 'fullscreen') return
+  app.requestDisplayMode({ mode: 'fullscreen' })
+    .then(({ mode }) => update({ context: { ...state.context, displayMode: mode } }))
+    .catch(() => {})
 }
 
 // Handlers go in before connect(), so the first notifications are not missed.
