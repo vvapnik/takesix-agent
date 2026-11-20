@@ -8,12 +8,12 @@
     "url": "https://github.com/vvapnik/takesix-agent",
     "source": "github"
   },
-  "version": "0.9.1",
+  "version": "1.0.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@takesix/mcp",
-      "version": "0.9.1",
+      "version": "1.0.0",
       "transport": {
         "type": "stdio"
       }
