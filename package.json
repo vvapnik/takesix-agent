@@ -1,0 +1,72 @@
+{
+  "name": "@takesix/mcp",
+  "version": "0.9.1",
+  "description": "MCP server and Agent Skill for TakeSix. TakeSix is an open format and libraries that let an AI agent answer with a diagram you can click into instead of a wall of text: at most six blocks per screen, and any block opens into up to six more.",
+  "homepage": "https://takesix.vapnik.de/",
+  "mcpName": "io.github.vvapnik/takesix",
+  "type": "module",
+  "bin": {
+    "takesix-mcp": "dist/mcp.js"
+  },
+  "files": [
+    "dist",
+    "skill/takesix/SKILL.md",
+    "skill/takesix/references"
+  ],
+  "scripts": {
+    "build": "vite build --config vite.cli.config.ts && vite build --config vite.app.config.ts && vite build --config vite.mcp.config.ts",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "takesix",
+    "mcp",
+    "mcp-server",
+    "mcp-app",
+    "model-context-protocol",
+    "agent-skill",
+    "diagram",
+    "visualization",
+    "nested",
+    "zoomable",
+    "ai",
+    "agent",
+    "claude",
+    "claude-code",
+    "codex",
+    "cursor"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vvapnik/takesix-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vvapnik/takesix-agent/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@takesix/core": "^1.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@takesix/react": "^1.0.0",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "preact": "^11.2.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

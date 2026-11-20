@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: explain-react-package
+expected_outcome: |
+  A .takesix.json file that explains the takesix-react package as a diagram (top level of at most
+  six blocks covering the component, the viewer, cards, arrows/geometry, editor features and styling),
+  which passes the validator, plus a rendered self-contained .html file, and a short reply that points
+  to the files instead of repeating the content as prose.

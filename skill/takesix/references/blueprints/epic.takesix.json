@@ -1,0 +1,91 @@
+{
+  "takesix": "1.0",
+  "title": "Epic: card payments",
+  "description": "Four milestones in order; open one for its tasks, a task for how it works",
+  "blocks": [
+    {
+      "id": "research",
+      "at": "A1:C1",
+      "icon": "✅",
+      "title": "Research",
+      "description": "Which provider, which cards, what it costs",
+      "children": [
+        { "id": "providers", "at": "A3:B3", "title": "Providers", "description": "Stripe, Adyen, Mollie", "details": "Compared on fees, payout time and EU card coverage.\n\n- **Stripe**: 1.5 % + 25 ct, payout in 2 days\n- **Adyen**: interchange++, minimum volume\n- **Mollie**: 1.8 % + 25 ct, SEPA included\n\nChosen: **Stripe**, for the API and the test mode." },
+        { "id": "cards", "at": "C3:D3", "title": "Card types", "description": "Visa, Mastercard, Amex", "details": "Visa and Mastercard cover 96 % of last year's orders. Amex adds 3 % at a higher fee: later." },
+        { "id": "costs", "at": "E3:F3", "title": "Costs", "description": "About 1.9 % of revenue", "details": "At 40 000 orders a month and 32 € on average: about 24 000 € a year in fees." }
+      ]
+    },
+    {
+      "id": "design",
+      "at": "B2:D2",
+      "icon": "✅",
+      "title": "Design",
+      "description": "Checkout flow and API contract agreed",
+      "details": "Checkout keeps one page. The card form is Stripe Elements, so card numbers never reach our servers. The API contract is `POST /charges` with the order id and an idempotency key."
+    },
+    {
+      "id": "build",
+      "at": "C3:E3",
+      "icon": "⏳",
+      "title": "Build",
+      "description": "Payment API, checkout form, webhooks",
+      "children": [
+        {
+          "id": "payment-api",
+          "at": "B2:C2",
+          "icon": "⬡",
+          "title": "Payment API",
+          "description": "Charges cards through Stripe",
+          "children": [
+            { "id": "gateway", "at": "B1:C1", "icon": "◉", "title": "Gateway", "description": "Auth, rate limits" },
+            {
+              "id": "charges",
+              "at": "B3:C3",
+              "icon": "⬡",
+              "title": "Charge service",
+              "description": "One charge per order, retried safely",
+              "children": [
+                { "id": "c-start", "at": "B1:C1", "shape": "terminator", "title": "Charge request" },
+                { "id": "c-bank", "at": "B2:C2", "shape": "io", "title": "Ask Stripe" },
+                { "id": "c-ok", "at": "B3:C4", "shape": "decision", "title": "Approved?" },
+                {
+                  "id": "c-save",
+                  "at": "B5:C5",
+                  "title": "Save the charge",
+                  "description": "Idempotent insert",
+                  "details": "The idempotency key is the order id, so a retried request never charges twice:\n\n```sql\nINSERT INTO charges (order_id, stripe_id, amount)\nVALUES ($1, $2, $3)\nON CONFLICT (order_id) DO NOTHING;\n```\n\nA conflict means an earlier request already saved this charge: answer with that one."
+                },
+                { "id": "c-decline", "at": "E3:F3", "title": "Return decline", "description": "Reason from Stripe" },
+                { "id": "c-end", "at": "E5:F5", "shape": "terminator", "title": "Done" }
+              ]
+            },
+            { "id": "pay-db", "at": "B5:C5", "icon": "◫", "title": "Database", "description": "PostgreSQL: charges" },
+            { "id": "stripe", "at": "E3:F3", "icon": "◉", "title": "Stripe", "description": "Card network access" }
+          ]
+        },
+        { "id": "checkout-form", "at": "D2:E2", "icon": "▭", "title": "Checkout form", "description": "Stripe Elements on one page", "details": "Replaces the card fields of the old form. Errors from Stripe show under the field they belong to." },
+        { "id": "webhooks", "at": "B4:C4", "icon": "⚙", "title": "Webhooks", "description": "Refunds and disputes", "details": "Listens to `charge.refunded` and `charge.dispute.created` and updates the order." },
+        { "id": "load-test", "at": "D4:E4", "icon": "⚙", "title": "Load test", "description": "200 charges a second", "details": "Black Friday peak last year was 140 orders a second. Target: 200, with p95 under 800 ms." }
+      ]
+    },
+    {
+      "id": "launch",
+      "at": "D4:F4",
+      "icon": "○",
+      "title": "Launch",
+      "description": "10 % of customers first, then everyone",
+      "details": "Week 1: 10 % of customers, compare conversion with the old checkout. Week 2: everyone, if conversion did not drop."
+    }
+  ],
+  "links": [
+    { "id": "l-gw", "from": "gateway", "to": "charges", "label": "HTTPS" },
+    { "id": "l-db", "from": "charges", "to": "pay-db", "label": "SQL" },
+    { "id": "l-stripe", "from": "charges", "to": "stripe", "label": "API" },
+    { "id": "l-c1", "from": "c-start", "to": "c-bank" },
+    { "id": "l-c2", "from": "c-bank", "to": "c-ok" },
+    { "id": "l-c3", "from": "c-ok", "to": "c-save", "label": "yes" },
+    { "id": "l-c4", "from": "c-ok", "to": "c-decline", "label": "no", "style": "dashed" },
+    { "id": "l-c5", "from": "c-save", "to": "c-end" },
+    { "id": "l-c6", "from": "c-decline", "to": "c-end", "style": "dashed" }
+  ]
+}

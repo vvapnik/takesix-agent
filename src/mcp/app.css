@@ -1,0 +1,17 @@
+html, body { margin: 0; }
+
+.frame {
+  position: relative;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.status {
+  margin: 0;
+  padding: 24px 16px;
+  color: #8a8f98;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
+.frame[data-theme='dark'] { color: #e6e8eb; }

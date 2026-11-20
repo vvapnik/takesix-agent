@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: blueprint-flowchart-reset
+expected_outcome: |
+  A flowchart of a password-reset algorithm with ISO 5807 shapes: terminators for start and end,
+  decisions with two or three labelled exits, a main column top to bottom, the way back of the retry loop
+  beside the column, at most six blocks a level with subprocesses for longer parts; valid and rendered to HTML.

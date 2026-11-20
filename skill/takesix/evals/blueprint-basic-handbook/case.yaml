@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: blueprint-basic-handbook
+expected_outcome: |
+  A takesix diagram of the parts of a company handbook laid out as basic blocks: peers gathered
+  around the middle of the grid with empty rows between rows of blocks, few or no arrows, long policy text
+  only in details at the bottom of a branch; valid and rendered to HTML.
