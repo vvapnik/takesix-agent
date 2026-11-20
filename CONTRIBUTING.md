@@ -110,4 +110,6 @@ To force a version, add a `Release-As: 2.0.0` footer to a commit. Settings
 are in `release-please-config.json`; `.release-please-manifest.json` holds
 the last released version. Release-please also bumps the version in
 `server.json` (MCP Registry) and `.claude-plugin/plugin.json`; from 1.0.0 on,
-a stable release is also published to the MCP Registry.
+a stable release is also published to the MCP Registry (once the version
+shows on npm). If that step fails, run the Publish workflow by hand: it then
+publishes only to the MCP Registry.

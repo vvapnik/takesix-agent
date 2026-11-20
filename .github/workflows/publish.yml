@@ -8,9 +8,13 @@ name: Publish
 # The npm publish runs in this workflow, not on the tag: tags pushed with the
 # default GITHUB_TOKEN do not trigger other workflows. The file name stays
 # publish.yml because npm trusted publishing is bound to it.
+#
+# Run it by hand (Actions → Publish → Run workflow) to publish the version in
+# server.json to the MCP Registry only, e.g. when that step failed.
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,6 +25,7 @@ concurrency:
 
 jobs:
   release-please:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write # tags and GitHub Releases
@@ -72,13 +77,44 @@ jobs:
       - run: npm ci
       # trusted publishing: npm exchanges the OIDC token, no npm token needed
       - run: npm publish --provenance --access public --tag "$DIST_TAG"
-      # The official MCP Registry (registry.modelcontextprotocol.io) lists the
-      # server from server.json; GitHub OIDC proves the io.github.vvapnik/
-      # namespace. Only for stable versions from 1.0.0 on: no catalog listings
-      # before 1.0.0 (TASK-78 on the Lab board). A failure does not undo npm.
+
+  # The official MCP Registry (registry.modelcontextprotocol.io) lists the
+  # server from server.json; GitHub OIDC proves the io.github.vvapnik/
+  # namespace. Only for stable versions from 1.0.0 on: no catalog listings
+  # before 1.0.0 (TASK-78 on the Lab board). A failure does not undo npm.
+  mcp-registry:
+    needs: [release-please, publish]
+    if: >-
+      always() && (github.event_name == 'workflow_dispatch' || needs.publish.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # proves the io.github.vvapnik/ namespace
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
+      - name: Stable version from 1.0.0 on
+        id: version
+        run: |
+          version=$(node -p "require('./server.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          case "$version" in
+            0.*|*-*) echo "::notice::$version is not listed in the MCP Registry"; echo "skip=true" >> "$GITHUB_OUTPUT" ;;
+          esac
+      # The registry checks the package on npm, which takes a few minutes
+      # to show a new version
+      - name: Wait for the version on npm
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          for i in $(seq 40); do
+            npm view "@takesix/mcp@${{ steps.version.outputs.version }}" version >/dev/null 2>&1 && exit 0
+            sleep 15
+          done
+          echo "::error::@takesix/mcp@${{ steps.version.outputs.version }} is not on npm after 10 minutes"
+          exit 1
       - name: Publish to the MCP Registry
-        if: env.DIST_TAG == 'latest' && !startsWith(env.TAG, 'v0.')
-        continue-on-error: true
+        if: steps.version.outputs.skip != 'true'
         run: |
           curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
           ./mcp-publisher login github-oidc
