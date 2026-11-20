@@ -68,7 +68,7 @@ orders and users"). Configuration, endpoints, schemas and code go to
 
 ```json
 {
-  "takesix": "1.0",
+  "takesix": "1.1",
   "title": "Shop backend",
   "description": "A request goes from top to bottom, operations beside",
   "blocks": [
