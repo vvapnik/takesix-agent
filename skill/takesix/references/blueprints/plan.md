@@ -53,7 +53,7 @@ bottom of the branch.
 
 ```json
 {
-  "takesix": "1.1",
+  "takesix": "1.2",
   "title": "Checkout redesign",
   "description": "Four stages; open one for its tasks",
   "blocks": [

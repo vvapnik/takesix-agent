@@ -67,7 +67,7 @@ out the description.
 
 ```json
 {
-  "takesix": "1.1",
+  "takesix": "1.2",
   "title": "Charge an order",
   "description": "Retry until the card is charged",
   "blocks": [
