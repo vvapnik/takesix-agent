@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/vvapnik/takesix-agent/compare/v1.1.0...v1.2.0) (2026-11-21)
+
+
+### Features
+
+* **skill:** journeys for tours and presentations, format 1.2 ([9516310](https://github.com/vvapnik/takesix-agent/commit/9516310bec4bd585d44cc8792428ea5f135d42d8))
+* **skill:** journeys for tours and presentations, format 1.2 ([57e2893](https://github.com/vvapnik/takesix-agent/commit/57e28938eba009ae03d74ab833c13626e54810a1))
+
 ## [1.1.0](https://github.com/vvapnik/takesix-agent/compare/v1.0.0...v1.1.0) (2026-11-21)
 
 
