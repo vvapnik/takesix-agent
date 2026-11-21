@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/vvapnik/takesix-agent/compare/v1.0.0...v1.1.0) (2026-11-21)
+
+
+### Features
+
+* **skill:** colour blocks with tone, format 1.1 ([81470fa](https://github.com/vvapnik/takesix-agent/commit/81470fa7c9792049c04a65d526a8950737ec6832))
+* **skill:** colour blocks with tone, format 1.1 ([d152660](https://github.com/vvapnik/takesix-agent/commit/d152660b9fb411f976624cf9152a3883968a91b4))
+
 ## [1.0.0](https://github.com/vvapnik/takesix-agent/compare/v0.9.1...v1.0.0) (2026-11-20)
 
 
