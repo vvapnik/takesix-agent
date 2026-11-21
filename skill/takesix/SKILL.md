@@ -74,7 +74,7 @@ HTML file that opens anywhere.
 
 ```json
 {
-  "takesix": "1.0",
+  "takesix": "1.1",
   "title": "Payments service",
   "description": "How a payment flows from checkout to the bank, in four parts",
   "blocks": [
@@ -95,13 +95,15 @@ HTML file that opens anywhere.
 }
 ```
 
-- **Document:** `takesix: "1.0"`, `title`, `description`, `blocks` (≤6), `links`.
+- **Document:** `takesix: "1.1"`, `title`, `description`, `blocks` (≤6), `links`.
 - **Block:** `id` (unique in the whole document), `at`, `title`,
   `description`, and optionally `icon` (one emoji or character, or an
   inline SVG drawing, see "Icons" below), `shape` (a
   flowchart symbol: `terminator`, `decision`, `io`, `subprocess`,
-  `loop-start`, `loop-end`; a plain card by default), and either `children`
-  (≤6) or `details` (Markdown text) — never both.
+  `loop-start`, `loop-end`; a plain card by default), `tone` (colour by
+  meaning: `accent`, `success`, `warning`, `danger`, or a colour of its own
+  as `"#RRGGBB"`; see "Colour" below), and either `children` (≤6) or
+  `details` (Markdown text) — never both.
 - **Place** (`at`, required): every level is a grid of 6 columns `A`–`F` and
   6 rows `1`–`6`, like a spreadsheet. A block covers one cell (`"B3"`) or a
   rectangle, top-left and bottom-right corners included (`"A1:C2"` is three
@@ -319,6 +321,17 @@ these rules hold for all of them.
   that read on light and dark backgrounds (mid tones such as `#3d6aff`,
   `#e5484d`, `#30a46c`, `#f5a524`, `#8e8e93`); not black or white.
 - On a one-column block the icon is the whole card, so make it count.
+
+**Colour**
+- `tone` makes a block stand out for a reason: `accent` for the one block to
+  look at first, `danger` for what is broken or a dead end, `warning` for a
+  risk, `success` for the happy path or what is done. Most blocks stay
+  neutral (leave `tone` out): when everything is coloured, nothing stands
+  out.
+- Colour only repeats what the text says (a reader may not tell colours
+  apart): name the risk or the error in the title or description too.
+- A colour of its own (`"#7a5af8"`) groups blocks by a category the names do
+  not cover, like teams or domains; use a mid tone, and only a few of them.
 
 **Structure**
 - Six is a hard limit (the validator rejects seven). When you have more, group

@@ -141,7 +141,17 @@ on its own. `skill/takesix/references/format.md` is a copy of
 `takesix-core/FORMAT.md`: update it when the format changes.
 
 Test prompts for the skill live in `skill/takesix/evals/`, in the layout
-`claude plugin eval` reads.
+`claude plugin eval` reads. Run them with the tools the cases need to save
+and check a diagram; without `--allow-tools` a run cannot write the
+`.takesix.json` its graders read, and every case scores near 0:
+
+```sh
+claude plugin eval skill/takesix --allow-tools Write Edit Bash \
+  --ablation none --concurrency 8 --threshold 0
+```
+
+`--case 'blueprint-*'` runs one group; `--ablation with-without` adds a run
+without the skill to compare against.
 
 ## AI-assisted development
 

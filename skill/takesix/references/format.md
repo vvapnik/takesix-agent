@@ -1,6 +1,6 @@
 <!-- Copied from takesix-core/FORMAT.md: keep in sync when the format changes. -->
 
-# takesix format 1.0
+# takesix format 1.1
 
 A takesix document describes a diagram as a tree of **blocks**. One screen
 shows one level of the tree, and **a level never holds more than 6 blocks**.
@@ -8,7 +8,7 @@ Opening a block shows its children, again at most 6, or, for a block with
 text instead of children, that text. **Links** connect blocks of one level.
 
 The format is plain JSON. A machine-readable definition is the JSON Schema in the takesix-core repository
-(`schema/takesix-1.0.schema.json`). Some rules
+(`schema/takesix-1.1.schema.json`). Some rules
 cannot be expressed in JSON Schema (unique ids, link endpoints, blocks that
 overlap); those are
 listed below and checked by `validateDocument()` in `@takesix/core` and by
@@ -18,8 +18,8 @@ listed below and checked by `validateDocument()` in `@takesix/core` and by
 
 ```json
 {
-  "$schema": "https://takesix.vapnik.de/schema/takesix-1.0.schema.json",
-  "takesix": "1.0",
+  "$schema": "https://takesix.vapnik.de/schema/takesix-1.1.schema.json",
+  "takesix": "1.1",
   "title": "Online shop",
   "blocks": [
     { "id": "web", "at": "A1:C1", "icon": "🖥", "title": "Web app", "description": "React SPA" },
@@ -46,7 +46,7 @@ listed below and checked by `validateDocument()` in `@takesix/core` and by
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
-| `takesix` | string | yes | Format version, `"1.0"`. |
+| `takesix` | string | yes | Format version, `"1.1"`. |
 | `title` | string | yes | Non-empty. |
 | `blocks` | Block[] | yes | Top level, at most 6. |
 | `links` | Link[] | | All links of the document. |
@@ -65,6 +65,7 @@ listed below and checked by `validateDocument()` in `@takesix/core` and by
 | `details` | string | | Long Markdown text the block opens into. Never together with `children`. |
 | `icon` | string | | An emoji, a single character, or an inline SVG drawing (`"<svg viewBox=…>…</svg>"`). The SVG is shown as an image: no scripts, no external files. |
 | `shape` | string | | Flowchart symbol, see [Flowcharts](#flowcharts). Defaults to `"process"`, a plain card. |
+| `tone` | string | | Colour by meaning, or a colour of your own; see [Tone](#tone). Defaults to `"neutral"`. Since 1.1. |
 | `children` | Block[] | | At most 6. Never together with `details`. |
 | `meta` | object | | Extension data. |
 
@@ -171,19 +172,25 @@ Errors (the document is rejected):
 - duplicate block id, duplicate link id;
 - link endpoint that is not a block id;
 - link from a block to itself;
-- unknown `direction`, `style` or `shape` value;
+- `direction`, `style`, `shape` or `tone` that is not a string;
 - version with a major number other than `1`.
 
 Warnings (the document is accepted):
 
 - unknown field (likely a typo; use `meta` for extension data);
+- unknown `direction`, `style`, `shape` or `tone` value, e.g. one added in a later
+  1.x, or a `tone` colour that is not `#RGB` or `#RRGGBB`: readers draw it
+  as the default (`forward`, `solid`, `process`, `neutral`) and editors keep
+  the original value;
 - link between blocks of different levels: it is never drawn (see above);
 - flowchart advice (see [Flowcharts](#flowcharts)): a `decision` without 2–3
   exits on its level, or with an exit that has no `label`; more than one
   start on a level (a `terminator` no link leads into).
 
-The JSON Schema is stricter about unknown fields than `validateDocument()`:
-it rejects them, which helps catch typos when a document is generated.
+The JSON Schema is stricter than `validateDocument()` about unknown fields
+and unknown `direction`, `style`, `shape` and `tone` values: it rejects them, which
+helps catch typos when a document is generated. Readers should rely on
+`validateDocument()`, not on the schema, to decide whether to open a document.
 
 ## Flowcharts
 
@@ -225,9 +232,46 @@ Deviations from ISO 5807:
 - symbols fill their grid cells, their proportions are not the standard's;
 - links between levels are not drawn, so a flow enters and leaves a
   `subprocess` on the level where it stands;
-- `dotted` lines, and later the colour of a block, are takesix additions.
+- `dotted` lines and the colour of a block (`tone`) are takesix additions.
 
 `document`, `database` and `connector` may follow in a later minor version.
+
+## Tone
+
+`tone` colours a block by what it means, so a reader sees at a glance which
+blocks stand out and why. Viewers turn it into a light fill and a border in
+the colours of their theme, light or dark; the text keeps the theme's colours.
+
+| `tone` | Use for |
+|---|---|
+| `neutral` (default) | everything else: most blocks |
+| `accent` | the main point, the block to look at first |
+| `success` | done, healthy, the happy path |
+| `warning` | at risk, needs attention, in progress |
+| `danger` | broken, an error, a dead end |
+
+A colour of your own is a hex string, `"#RGB"` or `"#RRGGBB"` (e.g.
+`"#7a5af8"`), for categories the names do not cover, like teams or domains.
+Viewers derive the fill and the border from it the same way, so it stays
+readable in both themes. Colour carries meaning only together with the text:
+say it in the title or the description too, for readers who do not tell the
+colours apart. Use few tones on one level; when every block is coloured,
+none stands out.
+
+## Screen addresses
+
+A viewer can point at one screen of a diagram with a URL fragment. The
+address is a block id, so it keeps working when the block moves:
+
+| Fragment | Shows |
+|---|---|
+| `#in=<id>` | the screen inside the block |
+| `#at=<id>` | the level the block lies on, with the block highlighted |
+| none | the top level |
+
+The id is percent-encoded. The address can share the fragment with other
+keys, joined with `&`, e.g. `#takesix=<data>&in=orders`. An unknown id shows
+the top level; `in` on a block that opens into nothing reads as `at`.
 
 ## Extension data
 
@@ -237,7 +281,13 @@ avoid clashes, e.g. `{ "meta": { "confluence.pageId": "123" } }`.
 
 ## Versioning
 
-`takesix` is `"<major>.<minor>"`. A minor release only adds optional fields,
-so a 1.0 reader can open a 1.x document (it will warn about the new fields).
+`takesix` is `"<major>.<minor>"`. A minor release only adds optional fields
+and new values of `direction`, `style`, `shape` and `tone`, so a 1.0 reader can
+open a 1.x document (it will warn about the new fields and values).
+
+| Version | Adds |
+|---|---|
+| 1.1 | `tone` on blocks |
+| 1.0 | the first release |
 A new major version means a breaking change; readers reject majors they do not
 know.

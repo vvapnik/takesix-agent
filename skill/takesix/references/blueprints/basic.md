@@ -66,7 +66,7 @@ previewed. Long text goes to `details` at the bottom of a branch.
 
 ```json
 {
-  "takesix": "1.0",
+  "takesix": "1.1",
   "title": "Online shop data",
   "description": "Four domains; open one for its tables",
   "blocks": [
