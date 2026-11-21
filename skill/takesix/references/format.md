@@ -1,6 +1,6 @@
 <!-- Copied from takesix-core/FORMAT.md: keep in sync when the format changes. -->
 
-# takesix format 1.1
+# takesix format 1.2
 
 A takesix document describes a diagram as a tree of **blocks**. One screen
 shows one level of the tree, and **a level never holds more than 6 blocks**.
@@ -8,9 +8,9 @@ Opening a block shows its children, again at most 6, or, for a block with
 text instead of children, that text. **Links** connect blocks of one level.
 
 The format is plain JSON. A machine-readable definition is the JSON Schema in the takesix-core repository
-(`schema/takesix-1.1.schema.json`). Some rules
-cannot be expressed in JSON Schema (unique ids, link endpoints, blocks that
-overlap); those are
+(`schema/takesix-1.2.schema.json`). Some rules
+cannot be expressed in JSON Schema (unique ids, link endpoints, journey step
+targets, blocks that overlap); those are
 listed below and checked by `validateDocument()` in `@takesix/core` and by
 `scripts/takesix.mjs validate` in this skill.
 
@@ -18,7 +18,7 @@ listed below and checked by `validateDocument()` in `@takesix/core` and by
 
 ```json
 {
-  "$schema": "https://takesix.vapnik.de/schema/takesix-1.1.schema.json",
+  "$schema": "https://takesix.vapnik.de/schema/takesix-1.2.schema.json",
   "takesix": "1.1",
   "title": "Online shop",
   "blocks": [
@@ -46,10 +46,11 @@ listed below and checked by `validateDocument()` in `@takesix/core` and by
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
-| `takesix` | string | yes | Format version, `"1.1"`. |
+| `takesix` | string | yes | Format version, `"1.2"`. |
 | `title` | string | yes | Non-empty. |
 | `blocks` | Block[] | yes | Top level, at most 6. |
 | `links` | Link[] | | All links of the document. |
+| `journeys` | Journey[] | | Guided tours, see [Journeys](#journeys). |
 | `description` | string | | |
 | `meta` | object | | Extension data, see below. |
 | `$schema` | string | | Schema URL for editors. |
@@ -169,8 +170,10 @@ Errors (the document is rejected):
 - two blocks of one level covering the same cell;
 - a block with both `children` and `details`;
 - more than 6 blocks on one level;
-- duplicate block id, duplicate link id;
-- link endpoint that is not a block id;
+- duplicate block id, duplicate link id, duplicate journey id;
+- link endpoint or journey step `in`/`at` that is not a block id;
+- journey step with both `in` and `at`; `duration` that is not a positive
+  number;
 - link from a block to itself;
 - `direction`, `style`, `shape` or `tone` that is not a string;
 - version with a major number other than `1`.
@@ -258,6 +261,50 @@ say it in the title or the description too, for readers who do not tell the
 colours apart. Use few tones on one level; when every block is coloured,
 none stands out.
 
+## Journeys
+
+A journey is a guided tour: screens of the diagram shown one after another,
+like slides. A viewer moves between them the way a reader would, up to the
+level two screens share and down again, so the reader keeps their bearings.
+A document may hold several journeys, e.g. one for newcomers and one for
+reviewers.
+
+```json
+"journeys": [
+  {
+    "id": "checkout",
+    "title": "How an order is placed",
+    "steps": [
+      { "label": "The whole shop" },
+      { "at": "web", "label": "The customer starts in the web app" },
+      { "in": "api", "label": "The API", "duration": 8 },
+      { "in": "orders", "notes": "Mention **refunds** here." }
+    ]
+  }
+]
+```
+
+| Journey field | Type | Required | Meaning |
+|---|---|---|---|
+| `id` | string | yes | Non-empty, unique among the journeys. Links point at it. |
+| `title` | string | yes | Non-empty. |
+| `steps` | Step[] | yes | The screens, in order. May be empty while the journey is being made. |
+| `description` | string | | |
+| `meta` | object | | Extension data. |
+
+| Step field | Type | Required | Meaning |
+|---|---|---|---|
+| `in` | string | | Id of a block: the step shows the screen inside it. |
+| `at` | string | | Id of a block: the step shows its level with the block highlighted. |
+| `label` | string | | Short caption shown with the step. |
+| `duration` | number | | Seconds the step stays on screen while the journey plays; viewers pick a default (6 in `@takesix/react`). |
+| `notes` | string | | Markdown to accompany the step, like speaker notes. Viewers need not show it. |
+| `meta` | object | | Extension data. |
+
+`in` and `at` mean the same as in a [screen address](#screen-addresses): a
+step has at most one of them, and a step with neither shows the top level.
+`in` on a block that opens into nothing reads as `at`.
+
 ## Screen addresses
 
 A viewer can point at one screen of a diagram with a URL fragment. The
@@ -273,9 +320,16 @@ The id is percent-encoded. The address can share the fragment with other
 keys, joined with `&`, e.g. `#takesix=<data>&in=orders`. An unknown id shows
 the top level; `in` on a block that opens into nothing reads as `at`.
 
+A step of a [journey](#journeys) is addressed with `#journey=<id>&step=<n>`,
+`n` counting from 1. It can come with `in` or `at`: then the reader has
+looked around during the journey, and that screen is shown, with the journey
+still at step `n`. Alone, it shows the step's screen. An unknown journey is
+ignored; a step number out of range shows the nearest step.
+
 ## Extension data
 
-Put tool-specific data in `meta` on the document, a block or a link. Tools
+Put tool-specific data in `meta` on the document, a block, a link, a journey
+or a step. Tools
 must keep `meta` they do not understand. Prefix keys with your tool name to
 avoid clashes, e.g. `{ "meta": { "confluence.pageId": "123" } }`.
 
@@ -287,6 +341,7 @@ open a 1.x document (it will warn about the new fields and values).
 
 | Version | Adds |
 |---|---|
+| 1.2 | `journeys` |
 | 1.1 | `tone` on blocks |
 | 1.0 | the first release |
 A new major version means a breaking change; readers reject majors they do not

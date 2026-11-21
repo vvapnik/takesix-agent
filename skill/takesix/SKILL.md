@@ -74,7 +74,7 @@ HTML file that opens anywhere.
 
 ```json
 {
-  "takesix": "1.1",
+  "takesix": "1.2",
   "title": "Payments service",
   "description": "How a payment flows from checkout to the bank, in four parts",
   "blocks": [
@@ -95,7 +95,8 @@ HTML file that opens anywhere.
 }
 ```
 
-- **Document:** `takesix: "1.1"`, `title`, `description`, `blocks` (≤6), `links`.
+- **Document:** `takesix: "1.2"`, `title`, `description`, `blocks` (≤6),
+  `links`, and optionally `journeys`.
 - **Block:** `id` (unique in the whole document), `at`, `title`,
   `description`, and optionally `icon` (one emoji or character, or an
   inline SVG drawing, see "Icons" below), `shape` (a
@@ -112,6 +113,15 @@ HTML file that opens anywhere.
 - **Link:** `from`, `to` (ids of two blocks of one level), optional `label`,
   `direction`: `forward` (default), `both`, `none`, and `style`: `solid`
   (default), `dashed`, `dotted`.
+- **Journey** (optional, only when the user wants a tour, a walkthrough or a
+  presentation of the diagram): `{ "id", "title", "steps": [...] }` in
+  `journeys`. A step shows one screen: `{ "in": "<block id>" }` the screen
+  inside a block, `{ "at": "<block id>" }` its level with the block
+  outlined, `{}` the top level; optional `label` (a short caption),
+  `duration` (seconds when it plays) and `notes` (Markdown, like speaker
+  notes). Start with the top level, then follow the story: viewers move
+  between steps level by level, so neighbouring steps close in the tree read
+  best.
 
 ## Pick a blueprint
 
